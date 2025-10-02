@@ -438,6 +438,11 @@ defmodule LiveSelect do
     doc:
       ~s(if `true`, when in single mode, display a "x" button in the input field to clear the selection)
 
+  attr :selected_option_order_first, :boolean,
+    default: Component.default_opts()[:selected_option_order_first],
+    doc:
+      "if `true`, move currently selected options to the top of the dropdown while keeping their relative order"
+
   attr :disabled, :boolean, doc: "set this to `true` to disable the component"
 
   attr :placeholder, :string, doc: "placeholder text for the input field"
