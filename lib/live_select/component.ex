@@ -20,6 +20,7 @@ defmodule LiveSelect.Component do
     clear_tag_button_class: nil,
     clear_tag_button_extra_class: nil,
     keep_options_on_select: false,
+    keep_current_text: false,
     current_text: "",
     user_defined_options: false,
     container_class: nil,
@@ -499,13 +500,19 @@ defmodule LiveSelect.Component do
         selection: selection,
         hide_dropdown: not quick_tags_mode?(socket)
       )
-      |> then(
-        &if keep_options_on_select?(&1) do
-          &1
-        else
-          assign(&1, %{options: [], current_text: ""})
+      |> maybe_keep_current_text(selected)
+      |> then(fn socket ->
+        cond do
+          keep_options_on_select?(socket) ->
+            socket
+
+          keep_current_text?(socket) ->
+            assign(socket, :options, [])
+
+          true ->
+            assign(socket, %{options: [], current_text: ""})
         end
-      )
+      end)
       |> maybe_prioritize_options()
 
     client_select(
@@ -728,6 +735,20 @@ defmodule LiveSelect.Component do
 
   defp keep_options_on_select?(socket) do
     socket.assigns.keep_options_on_select || quick_tags_mode?(socket)
+  end
+
+  defp keep_current_text?(socket) do
+    socket.assigns.keep_current_text && socket.assigns.mode == :single
+  end
+
+  defp maybe_keep_current_text(socket, selected) do
+    label = if is_map(selected), do: Map.get(selected, :label), else: nil
+
+    if keep_current_text?(socket) && label do
+      assign(socket, :current_text, label)
+    else
+      socket
+    end
   end
 
   defp new_current_text_after_selection(socket) do

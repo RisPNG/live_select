@@ -1106,4 +1106,27 @@ defmodule LiveSelectTest do
       assert_selected(live, "A")
     end
   end
+
+  describe "when keep_current_text = true" do
+    setup %{conn: conn} do
+      {:ok, live, _html} = live(conn, "/?keep_options_on_select=true&keep_current_text=true")
+
+      %{live: live}
+    end
+
+    test "keeps the selected label in the text field when refocusing", %{live: live} do
+      stub_options(["A", "B", "C"])
+
+      type(live, "ABC")
+
+      select_nth_option(live, 2)
+
+      assert_selected(live, "B")
+
+      element(live, selectors()[:container])
+      |> render_hook("focus", %{})
+
+      assert_selected_static(live, "B")
+    end
+  end
 end
