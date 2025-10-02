@@ -1128,5 +1128,22 @@ defmodule LiveSelectTest do
 
       assert_selected_static(live, "B")
     end
+
+    test "restores selected label after editing text and blurring", %{live: live} do
+      stub_options(["A", "B", "C"])
+
+      type(live, "ABC")
+
+      select_nth_option(live, 2)
+
+      assert_selected(live, "B")
+
+      type(live, "BBD")
+
+      element(live, selectors()[:container])
+      |> render_hook("blur", %{})
+
+      assert_selected_static(live, "B")
+    end
   end
 end
