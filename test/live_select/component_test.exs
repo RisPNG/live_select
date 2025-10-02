@@ -199,6 +199,32 @@ defmodule LiveSelect.ComponentTest do
 
       assert_selected_static(component, "C", 3)
     end
+
+    test "moves selected option to the top when enabled", %{form: form} do
+      component =
+        render_component(&LiveSelect.live_select/1,
+          field: form[:city_search],
+          value: "C",
+          options: ["A", "B", "C", "D", "E"],
+          hide_dropdown: false,
+          selected_option_order_first: true
+        )
+
+      assert_option_order(component, ["C", "A", "B", "D", "E"])
+    end
+
+    test "keeps original order if selection is missing", %{form: form} do
+      component =
+        render_component(&LiveSelect.live_select/1,
+          field: form[:city_search],
+          value: "Z",
+          options: ["A", "B", "C", "D", "E"],
+          hide_dropdown: false,
+          selected_option_order_first: true
+        )
+
+      assert_option_order(component, ["A", "B", "C", "D", "E"])
+    end
   end
 
   describe "in tags mode" do
@@ -370,6 +396,20 @@ defmodule LiveSelect.ComponentTest do
         %{label: "A", value: 1},
         %{label: "C", value: 3}
       ])
+    end
+
+    test "prioritizes selected options in dropdown order", %{form: form} do
+      component =
+        render_component(&LiveSelect.live_select/1,
+          mode: :tags,
+          field: form[:city_search],
+          value: ["C", "E"],
+          options: ["A", "B", "C", "D", "E"],
+          hide_dropdown: false,
+          selected_option_order_first: true
+        )
+
+      assert_option_order(component, ["C", "E", "A", "B", "D"])
     end
   end
 

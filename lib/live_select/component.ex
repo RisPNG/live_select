@@ -36,6 +36,7 @@ defmodule LiveSelect.Component do
     options: [],
     placeholder: nil,
     selected_option_class: nil,
+    selected_option_order_first: false,
     style: :tailwind,
     tag_class: nil,
     tag_extra_class: nil,
@@ -188,6 +189,8 @@ defmodule LiveSelect.Component do
         socket
       end
 
+    socket = maybe_prioritize_options(socket)
+
     {:ok, socket}
   end
 
@@ -248,7 +251,8 @@ defmodule LiveSelect.Component do
     json = Phoenix.json_library()
 
     {:noreply,
-     assign(socket,
+     socket
+     |> assign(
        options: options,
        selection:
          Enum.map(socket.assigns.selection, fn %{value: value} ->
@@ -257,7 +261,8 @@ defmodule LiveSelect.Component do
            end)
          end)
          |> Enum.filter(& &1)
-     )}
+     )
+     |> maybe_prioritize_options()}
   end
 
   @impl true
@@ -501,6 +506,7 @@ defmodule LiveSelect.Component do
           assign(&1, %{options: [], current_text: ""})
         end
       )
+      |> maybe_prioritize_options()
 
     client_select(
       socket,
@@ -736,6 +742,87 @@ defmodule LiveSelect.Component do
         ""
     end
   end
+
+  defp maybe_prioritize_options(%{assigns: assigns} = socket) do
+    if prioritize_selected_options?(assigns) do
+      options = assigns.options
+      active_option = assigns.active_option
+      active_option_item = active_option_item(options, active_option)
+
+      case reorder_options(options, assigns.selection) do
+        {:ok, reordered} when reordered != options ->
+          new_active_option =
+            if active_option_item do
+              Enum.find_index(reordered, &(&1 == active_option_item)) || active_option
+            else
+              active_option
+            end
+
+          socket
+          |> assign(:options, reordered)
+          |> assign(:active_option, new_active_option)
+
+        _ ->
+          socket
+      end
+    else
+      socket
+    end
+  end
+
+  defp prioritize_selected_options?(%{
+         selected_option_order_first: true,
+         selection: selection,
+         options: options
+       })
+       when is_list(selection) and selection != [] and is_list(options) and options != [] do
+    true
+  end
+
+  defp prioritize_selected_options?(_), do: false
+
+  defp active_option_item(options, active_option)
+       when is_integer(active_option) and active_option >= 0 do
+    Enum.at(options, active_option)
+  end
+
+  defp active_option_item(_options, _active_option), do: nil
+
+  defp reorder_options(options, selection) do
+    selection
+    |> Enum.reduce_while({[], options}, fn selection_option, {selected, remaining} ->
+      case pop_selected_option(remaining, selection_option) do
+        {option, new_remaining} -> {:cont, {[option | selected], new_remaining}}
+        nil -> {:halt, :error}
+      end
+    end)
+    |> case do
+      :error ->
+        :error
+
+      {selected, remaining} ->
+        {:ok, Enum.reverse(selected) ++ remaining}
+    end
+  end
+
+  defp pop_selected_option(options, selection_option) do
+    case Enum.find_index(options, &options_match?(&1, selection_option)) do
+      nil ->
+        nil
+
+      idx ->
+        option = Enum.at(options, idx)
+        {option, List.delete_at(options, idx)}
+    end
+  end
+
+  defp options_match?(nil, _selection_option), do: false
+
+  defp options_match?(_option, nil), do: false
+
+  defp options_match?(%{value: value1}, %{value: value2}), do: value1 == value2
+
+  defp options_match?(_option, _selection_option), do: false
 
   defp next_selectable(%{
          selection: selection,
