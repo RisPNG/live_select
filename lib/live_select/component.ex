@@ -197,17 +197,14 @@ defmodule LiveSelect.Component do
 
   @impl true
   def handle_event("blur", _params, socket) do
+    current_text = label(socket.assigns.mode, socket.assigns.selection) || ""
+
     socket =
       socket
-      |> assign(:hide_dropdown, true)
+      |> assign(hide_dropdown: true, current_text: current_text)
       |> client_select(%{
         parent_event: socket.assigns[:"phx-blur"],
-        current_text:
-          if socket.assigns.mode == :single && socket.assigns.selection != [] do
-            List.first(socket.assigns.selection).label
-          else
-            ""
-          end
+        current_text: current_text
       })
 
     {:noreply, socket}
@@ -276,15 +273,22 @@ defmodule LiveSelect.Component do
   end
 
   @impl true
-  def handle_event("keydown", %{"key" => "ArrowDown"}, socket) do
-    active_option = next_selectable(socket.assigns)
+  def handle_event("keydown", %{"key" => "Escape"}, socket) do
+    current_text = label(socket.assigns.mode, socket.assigns.selection)
 
     socket =
-      assign(socket,
-        active_option: active_option,
-        hide_dropdown: false
-      )
-      |> push_event("active", %{id: socket.assigns.id, idx: active_option})
+      socket
+      |> assign(:hide_dropdown, true)
+      |> then(fn socket ->
+        if is_nil(current_text) do
+          socket
+        else
+          assign(socket, :current_text, current_text)
+        end
+      end)
+      |> client_select(%{
+        current_text: current_text
+      })
 
     {:noreply, socket}
   end
