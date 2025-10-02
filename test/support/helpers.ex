@@ -221,24 +221,6 @@ defmodule LiveSelect.TestHelpers do
 
   def assert_options(live, elements), do: assert_options(render(live), elements)
 
-  def assert_option_order(rendered, elements) when is_binary(rendered) do
-    actual =
-      rendered
-      |> Floki.parse_document!()
-      |> Floki.find(@selectors[:dropdown_entries])
-      |> Enum.map(fn entry ->
-        entry
-        |> Floki.text()
-        |> String.replace(~r/\s+/, " ")
-        |> String.trim()
-      end)
-      |> Enum.reject(&(&1 == ""))
-
-    assert actual == Enum.map(elements, &to_string/1)
-  end
-
-  def assert_option_order(live, elements), do: assert_option_order(render(live), elements)
-
   def assert_option_active(live, pos, active_class \\ "active")
 
   def assert_option_active(_live, _pos, "") do
