@@ -314,14 +314,20 @@ defmodule LiveSelect.Component do
 
   @impl true
   def handle_event("keydown", %{"key" => "Escape"}, socket) do
+    current_text = label(socket.assigns.mode, socket.assigns.selection)
+
     socket =
       socket
       |> assign(:hide_dropdown, true)
+      |> then(fn socket ->
+        if is_nil(current_text) do
+          socket
+        else
+          assign(socket, :current_text, current_text)
+        end
+      end)
       |> client_select(%{
-        current_text:
-          if(socket.assigns.mode == :single && socket.assigns.selection != [],
-            do: List.first(socket.assigns.selection).label
-          )
+        current_text: current_text
       })
 
     {:noreply, socket}
