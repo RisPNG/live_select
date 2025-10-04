@@ -212,14 +212,26 @@ defmodule LiveSelect.Component do
 
   @impl true
   def handle_event(event, _params, socket) when event in ~w(focus click) do
+    current_text =
+      cond do
+        socket.assigns.selection != [] ->
+          label(socket.assigns.mode, socket.assigns.selection) || ""
+
+        keep_current_text?(socket) ->
+          ""
+
+        true ->
+          socket.assigns.current_text
+      end
+
     socket =
       socket
+      |> assign(hide_dropdown: false, current_text: current_text)
       |> client_select(%{
         input_event: false,
         parent_event: socket.assigns[:"phx-focus"],
-        current_text: socket.assigns.current_text
+        current_text: current_text
       })
-      |> assign(hide_dropdown: false)
 
     {:noreply, socket}
   end
