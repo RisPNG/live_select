@@ -76,9 +76,7 @@ defmodule LiveSelectWeb.ShowcaseLive do
         default: Component.default_opts()[:keep_options_on_select]
       )
 
-      field(:keep_current_text, :boolean,
-        default: Component.default_opts()[:keep_current_text]
-      )
+      field(:keep_current_text, :boolean, default: Component.default_opts()[:keep_current_text])
 
       field(:mode, Ecto.Enum,
         values: [:single, :tags, :quick_tags],

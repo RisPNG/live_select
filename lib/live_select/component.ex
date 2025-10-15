@@ -97,6 +97,7 @@ defmodule LiveSelect.Component do
         hide_dropdown: true,
         awaiting_update: true,
         selection: [],
+        static_options: false,
         value_mapper: & &1
       )
 
@@ -133,6 +134,13 @@ defmodule LiveSelect.Component do
     socket =
       socket
       |> assign(assigns)
+      |> then(fn socket ->
+        if Map.has_key?(assigns, :options) do
+          assign(socket, :static_options, Map.has_key?(assigns, :field))
+        else
+          socket
+        end
+      end)
       |> assign(:active_option, -1)
       |> update(:awaiting_update, fn
         _, %{options: _} -> false
@@ -526,6 +534,9 @@ defmodule LiveSelect.Component do
       |> then(fn socket ->
         cond do
           keep_options_on_select?(socket) ->
+            socket
+
+          keep_current_text?(socket) and Map.get(socket.assigns, :static_options, false) ->
             socket
 
           keep_current_text?(socket) ->
