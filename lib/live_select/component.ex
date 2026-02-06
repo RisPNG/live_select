@@ -149,6 +149,14 @@ defmodule LiveSelect.Component do
         |> assign_new(opt, fn -> default end)
       end)
       |> update(:options, &normalize_options/1)
+      |> then(fn socket ->
+        if Map.has_key?(assigns, :options) &&
+             socket.assigns.active_option >= length(socket.assigns.options) do
+          assign(socket, active_option: -1)
+        else
+          socket
+        end
+      end)
       |> assign(:text_input_field, String.to_atom("#{socket.assigns.field.field}_text_input"))
 
     socket =
@@ -312,9 +320,18 @@ defmodule LiveSelect.Component do
 
   @impl true
   def handle_event("option_click", %{"idx" => idx}, socket) do
-    socket = assign(socket, :active_option, String.to_integer(idx))
+    idx = String.to_integer(idx)
 
-    {:noreply, maybe_select(socket)}
+    socket =
+      if idx >= 0 && idx < length(socket.assigns.options) do
+        socket
+        |> assign(:active_option, idx)
+        |> maybe_select()
+      else
+        socket
+      end
+
+    {:noreply, socket}
   end
 
   @impl true
