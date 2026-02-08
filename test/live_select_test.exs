@@ -1155,4 +1155,62 @@ defmodule LiveSelectTest do
 
     assert_selected_static(live, "B")
   end
+
+  test "resets active_option when options shrink via send_update", %{conn: conn} do
+    stub_options([%{label: "A", value: 1}, %{label: "B", value: 2}, %{label: "C", value: 3}])
+
+    {:ok, live, _html} = live(conn, "/")
+
+    type(live, "ABC")
+
+    navigate(live, 3, :down)
+
+    send_update(live, options: [%{label: "X", value: 10}, %{label: "Y", value: 20}])
+
+    keydown(live, "Enter")
+
+    refute_selected(live)
+  end
+
+  test "does not crash when pressing Enter with out-of-bounds active_option", %{conn: conn} do
+    stub_options([%{label: "A", value: 1}, %{label: "B", value: 2}, %{label: "C", value: 3}])
+
+    {:ok, live, _html} = live(conn, "/")
+
+    type(live, "ABC")
+
+    navigate(live, 5, :down)
+
+    send_update(live, options: [%{label: "X", value: 10}, %{label: "Y", value: 20}])
+
+    keydown(live, "Enter")
+
+    refute_selected(live)
+  end
+
+  test "ignores out-of-bounds idx in option_click event", %{conn: conn} do
+    stub_options([%{label: "A", value: 1}, %{label: "B", value: 2}, %{label: "C", value: 3}])
+
+    {:ok, live, _html} = live(conn, "/")
+
+    type(live, "ABC")
+
+    element(live, selectors()[:container])
+    |> render_hook("option_click", %{idx: "999"})
+
+    refute_selected(live)
+  end
+
+  test "ignores negative idx in option_click event", %{conn: conn} do
+    stub_options([%{label: "A", value: 1}, %{label: "B", value: 2}, %{label: "C", value: 3}])
+
+    {:ok, live, _html} = live(conn, "/")
+
+    type(live, "ABC")
+
+    element(live, selectors()[:container])
+    |> render_hook("option_click", %{idx: "-1"})
+
+    refute_selected(live)
+  end
 end
