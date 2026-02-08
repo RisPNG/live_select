@@ -1,3 +1,7 @@
+## 1.7.5 (2026-02-08)
+
+* Bugfix: [fix out-of-bounds active_option crash](https://github.com/maxmarcon/live_select/pull/132)
+
 ## 1.7.4 (2025-11-28)
 
 * Bugfix: [quick_tags with overflow does not preserve scroll](https://github.com/maxmarcon/live_select/issues/129)
