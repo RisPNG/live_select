@@ -76,7 +76,9 @@ defmodule LiveSelectWeb.ShowcaseLive do
         default: Component.default_opts()[:keep_options_on_select]
       )
 
-      field(:restore_on_focus, :boolean, default: Component.default_opts()[:restore_on_focus])
+      field(:keep_label_on_select, :boolean,
+        default: Component.default_opts()[:keep_label_on_select]
+      )
 
       field(:mode, Ecto.Enum,
         values: [:single, :tags, :quick_tags],
@@ -108,7 +110,7 @@ defmodule LiveSelectWeb.ShowcaseLive do
           :disabled,
           :options_styled_as_checkboxes,
           :keep_options_on_select,
-          :restore_on_focus,
+          :keep_label_on_select,
           :max_selectable,
           :user_defined_options,
           :mode,
@@ -149,7 +151,7 @@ defmodule LiveSelectWeb.ShowcaseLive do
           (settings.mode == :single && option == :max_selectable) ||
           (settings.mode != :single && option == :allow_clear) ||
           (settings.mode == :quick_tags && option == :keep_options_on_select) ||
-          (settings.mode != :single && option == :restore_on_focus)
+          (settings.mode != :single && option == :keep_label_on_select)
       end)
       |> Keyword.new()
     end

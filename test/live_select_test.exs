@@ -1214,11 +1214,11 @@ defmodule LiveSelectTest do
     refute_selected(live)
   end
 
-  describe "when restore_on_focus = true" do
+  describe "when keep_label_on_select = true" do
     setup %{conn: conn} do
       stub_options(A: 1, B: 2, C: 3)
 
-      {:ok, live, _html} = live(conn, "/?restore_on_focus=true")
+      {:ok, live, _html} = live(conn, "/?keep_label_on_select=true")
 
       type(live, "ABC")
       select_nth_option(live, 2)
@@ -1294,7 +1294,7 @@ defmodule LiveSelectTest do
     test "without a selection, focus behaves as default", %{conn: conn} do
       stub_options(A: 1, B: 2, C: 3)
 
-      {:ok, live, _html} = live(conn, "/?restore_on_focus=true")
+      {:ok, live, _html} = live(conn, "/?keep_label_on_select=true")
 
       type(live, "ABC")
 

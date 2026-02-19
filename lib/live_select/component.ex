@@ -20,7 +20,7 @@ defmodule LiveSelect.Component do
     clear_tag_button_class: nil,
     clear_tag_button_extra_class: nil,
     keep_options_on_select: false,
-    restore_on_focus: false,
+    keep_label_on_select: false,
     current_text: "",
     user_defined_options: false,
     container_class: nil,
@@ -220,7 +220,7 @@ defmodule LiveSelect.Component do
   @impl true
   def handle_event(event, _params, socket) when event in ~w(focus click) do
     restore =
-      socket.assigns.restore_on_focus &&
+      socket.assigns.keep_label_on_select &&
         socket.assigns.mode == :single &&
         socket.assigns.selection != []
 
