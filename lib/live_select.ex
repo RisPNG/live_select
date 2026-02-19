@@ -418,6 +418,11 @@ defmodule LiveSelect do
     doc:
       ~s(if `true`, the current list of selectable options and the content of the input text field are preserved upon selection)
 
+  attr :restore_on_focus, :boolean,
+    default: Component.default_opts()[:restore_on_focus],
+    doc:
+      ~s(if `true`, when in single mode, the input text field is preserved to the active option label upon selection.)
+
   attr :value, :any, doc: "used to manually set a selection - overrides any values from the form.
   Must be a single element in `:single` mode, or a list of elements in `:tags` mode."
 

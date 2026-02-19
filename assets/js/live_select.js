@@ -89,7 +89,7 @@ export default {
         },
         mounted() {
             this.maybeStyleClearButtons()
-            this.handleEvent("select", ({ id, selection, mode, current_text, input_event, parent_event }) => {
+            this.handleEvent("select", ({ id, selection, mode, current_text, input_event, parent_event, trigger_change }) => {
                 if (this.el.id === id) {
                     this.selection = selection
                     if (current_text != null) {
@@ -100,6 +100,11 @@ export default {
                     }
                     if (parent_event) {
                         this.pushEventToParent(parent_event, { id })
+                    }
+                    if (trigger_change) {
+                        const field = this.el.dataset['field']
+                        this.pushEventTo(this.el, "change", { text: current_text })
+                        this.pushEventToParent("live_select_change", { id: this.el.id, field, text: current_text })
                     }
                 }
             })

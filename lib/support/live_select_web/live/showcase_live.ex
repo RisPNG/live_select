@@ -76,6 +76,8 @@ defmodule LiveSelectWeb.ShowcaseLive do
         default: Component.default_opts()[:keep_options_on_select]
       )
 
+      field(:restore_on_focus, :boolean, default: Component.default_opts()[:restore_on_focus])
+
       field(:mode, Ecto.Enum,
         values: [:single, :tags, :quick_tags],
         default: Component.default_opts()[:mode]
@@ -106,6 +108,7 @@ defmodule LiveSelectWeb.ShowcaseLive do
           :disabled,
           :options_styled_as_checkboxes,
           :keep_options_on_select,
+          :restore_on_focus,
           :max_selectable,
           :user_defined_options,
           :mode,

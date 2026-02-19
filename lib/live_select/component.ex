@@ -20,6 +20,7 @@ defmodule LiveSelect.Component do
     clear_tag_button_class: nil,
     clear_tag_button_extra_class: nil,
     keep_options_on_select: false,
+    restore_on_focus: false,
     current_text: "",
     user_defined_options: false,
     container_class: nil,
@@ -218,12 +219,28 @@ defmodule LiveSelect.Component do
 
   @impl true
   def handle_event(event, _params, socket) when event in ~w(focus click) do
+    restore =
+      socket.assigns.restore_on_focus &&
+        socket.assigns.mode == :single &&
+        socket.assigns.selection != []
+
+    current_text =
+      if restore do
+        List.first(socket.assigns.selection).label
+      else
+        socket.assigns.current_text
+      end
+
+    trigger_change = restore && Enum.empty?(socket.assigns.options)
+
     socket =
       socket
+      |> assign(current_text: current_text)
       |> client_select(%{
         input_event: false,
         parent_event: socket.assigns[:"phx-focus"],
-        current_text: socket.assigns.current_text
+        current_text: current_text,
+        trigger_change: trigger_change
       })
       |> assign(hide_dropdown: false)
 
