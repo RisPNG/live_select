@@ -1227,29 +1227,18 @@ defmodule LiveSelectTest do
       %{live: live}
     end
 
-    test "on focus, the text input is set to the selected label", %{live: live} do
+    test "on focus, the text input displays the selected label", %{live: live} do
       element(live, selectors()[:text_input])
       |> render_focus()
 
       assert_set_text_field(live, :B)
     end
 
-    test "on click, the text input is set to the selected label", %{live: live} do
+    test "on click, the text input displays the selected label", %{live: live} do
       element(live, selectors()[:text_input])
       |> render_click()
 
       assert_set_text_field(live, :B)
-    end
-
-    test "on focus with cleared options, trigger_change is sent", %{live: live} do
-      element(live, selectors()[:text_input])
-      |> render_focus()
-
-      assert_push_event(live, "select", %{
-        id: "my_form_city_search_live_select_component",
-        current_text: :B,
-        trigger_change: true
-      })
     end
 
     test "on blur, the text input is restored to the selected label", %{live: live} do
@@ -1266,6 +1255,8 @@ defmodule LiveSelectTest do
       element(live, selectors()[:text_input])
       |> render_blur()
 
+      assert_set_text_field(live, :B)
+
       element(live, selectors()[:text_input])
       |> render_focus()
 
@@ -1275,20 +1266,6 @@ defmodule LiveSelectTest do
       |> render_blur()
 
       assert_selected_static(live, :B, 2)
-    end
-
-    test "trigger_change is sent even when options are present", %{live: live} do
-      stub_options(A: 1, B: 2, C: 3)
-      type(live, "ABC")
-
-      element(live, selectors()[:text_input])
-      |> render_focus()
-
-      assert_push_event(live, "select", %{
-        id: "my_form_city_search_live_select_component",
-        current_text: :B,
-        trigger_change: true
-      })
     end
 
     test "without a selection, focus behaves as default", %{conn: conn} do
@@ -1304,7 +1281,7 @@ defmodule LiveSelectTest do
       assert_set_text_field(live, "ABC")
     end
 
-    test "trigger_change suppresses phx-focus parent_event", %{conn: conn} do
+    test "phx-focus parent_event fires normally on focus", %{conn: conn} do
       stub_options(A: 1, B: 2, C: 3)
 
       {:ok, live, _html} =
@@ -1319,8 +1296,8 @@ defmodule LiveSelectTest do
 
       assert_push_event(live, "select", %{
         id: "my_form_city_search_live_select_component",
-        trigger_change: true,
-        parent_event: nil
+        current_text: :B,
+        parent_event: "focus-event-for-parent"
       })
     end
   end

@@ -219,28 +219,25 @@ defmodule LiveSelect.Component do
 
   @impl true
   def handle_event(event, _params, socket) when event in ~w(focus click) do
-    restore =
+    keep_label_on_select =
       socket.assigns.keep_label_on_select &&
         socket.assigns.mode == :single &&
         socket.assigns.selection != []
 
-    current_text =
-      if restore do
+    display_text =
+      if keep_label_on_select do
         List.first(socket.assigns.selection).label
       else
         socket.assigns.current_text
       end
 
-    trigger_change = restore
-
     socket =
       socket
-      |> assign(current_text: current_text)
+      |> assign(current_text: if(keep_label_on_select, do: "", else: socket.assigns.current_text))
       |> client_select(%{
         input_event: false,
-        parent_event: if(!trigger_change, do: socket.assigns[:"phx-focus"]),
-        current_text: current_text,
-        trigger_change: trigger_change
+        parent_event: socket.assigns[:"phx-focus"],
+        current_text: display_text
       })
       |> assign(hide_dropdown: false)
 
