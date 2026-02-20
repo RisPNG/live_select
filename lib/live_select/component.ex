@@ -559,8 +559,8 @@ defmodule LiveSelect.Component do
 
   defp clear(socket, params) do
     socket
-    |> assign(selection: [])
-    |> client_select(params)
+    |> assign(selection: [], current_text: "")
+    |> client_select(Map.put(params, :current_text, ""))
   end
 
   defp clear_options(socket) do
