@@ -204,13 +204,6 @@ defmodule LiveSelect.Component do
     socket =
       socket
       |> assign(:hide_dropdown, true)
-      |> then(fn socket ->
-        if socket.assigns.keep_label_on_select && socket.assigns.mode == :single do
-          clear_options(socket)
-        else
-          socket
-        end
-      end)
       |> client_select(%{
         parent_event: socket.assigns[:"phx-blur"],
         current_text:
@@ -238,7 +231,7 @@ defmodule LiveSelect.Component do
         socket.assigns.current_text
       end
 
-    trigger_change = restore && Enum.empty?(socket.assigns.options)
+    trigger_change = restore
 
     socket =
       socket

@@ -1277,7 +1277,7 @@ defmodule LiveSelectTest do
       assert_selected_static(live, :B, 2)
     end
 
-    test "does not trigger_change when options are present", %{live: live} do
+    test "trigger_change is sent even when options are present", %{live: live} do
       stub_options(A: 1, B: 2, C: 3)
       type(live, "ABC")
 
@@ -1287,7 +1287,7 @@ defmodule LiveSelectTest do
       assert_push_event(live, "select", %{
         id: "my_form_city_search_live_select_component",
         current_text: :B,
-        trigger_change: false
+        trigger_change: true
       })
     end
 
