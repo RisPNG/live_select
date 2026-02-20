@@ -238,7 +238,7 @@ defmodule LiveSelect.Component do
       |> assign(current_text: current_text)
       |> client_select(%{
         input_event: false,
-        parent_event: socket.assigns[:"phx-focus"],
+        parent_event: if(!trigger_change, do: socket.assigns[:"phx-focus"]),
         current_text: current_text,
         trigger_change: trigger_change
       })
