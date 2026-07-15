@@ -150,6 +150,94 @@ defmodule LiveSelectTest do
     refute_selected(live)
   end
 
+  describe "when dropdown_selectable_priority = true" do
+    test "hitting enter selects the first selectable dropdown option", %{conn: conn} do
+      stub_options([%{label: "A", value: 1, disabled: true}, {"B", 2}, {"C", 3}])
+
+      {:ok, live, _html} = live(conn, "/?dropdown_selectable_priority=true")
+
+      type(live, "ABC")
+      keydown(live, "Enter")
+
+      assert_selected(live, "B", 2)
+    end
+
+    test "dropdown option takes priority over user-defined text", %{conn: conn} do
+      stub_options([{"A", 1}, {"B", 2}])
+
+      {:ok, live, _html} =
+        live(conn, "/?dropdown_selectable_priority=true&user_defined_options=true")
+
+      type(live, "ABC")
+      keydown(live, "Enter")
+
+      assert_selected(live, "A", 1)
+    end
+
+    test "user-defined text is selected when the dropdown has no selectable options", %{
+      conn: conn
+    } do
+      stub_options([%{label: "A", value: 1, disabled: true}])
+
+      {:ok, live, _html} =
+        live(conn, "/?dropdown_selectable_priority=true&user_defined_options=true")
+
+      type(live, "ABC")
+      keydown(live, "Enter")
+
+      assert_selected(live, "ABC")
+    end
+
+    test "hitting enter while awaiting options selects after they arrive", %{conn: conn} do
+      stub_options([], delay_forever: true)
+
+      {:ok, live, _html} =
+        live(conn, "/?dropdown_selectable_priority=true&user_defined_options=true")
+
+      type(live, "ABC")
+      keydown(live, "Enter")
+
+      refute_selected(live)
+
+      send_update(live, options: [{"A", 1}, {"B", 2}])
+
+      assert_selected(live, "A", 1)
+    end
+
+    test "hitting enter while awaiting an empty result selects the entered text", %{conn: conn} do
+      stub_options([], delay_forever: true)
+
+      {:ok, live, _html} =
+        live(conn, "/?dropdown_selectable_priority=true&user_defined_options=true")
+
+      type(live, "ABC")
+      keydown(live, "Enter")
+
+      refute_selected(live)
+
+      send_update(live, options: [])
+
+      assert_selected(live, "ABC")
+    end
+
+    test "clearing options cancels a queued enter", %{conn: conn} do
+      stub_options([], delay_forever: true)
+
+      {:ok, live, _html} =
+        live(conn, "/?dropdown_selectable_priority=true&user_defined_options=true")
+
+      type(live, "ABC")
+      keydown(live, "Enter")
+
+      element(live, selectors()[:container])
+      |> render_hook("options_clear", %{})
+
+      send_update(live, options: [{"A", 1}])
+
+      refute_selected(live)
+    end
+  end
+
   describe "when user_defined_options = true" do
     setup %{conn: conn} do
       {:ok, live, _html} = live(conn, "/?user_defined_options=true")

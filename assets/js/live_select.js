@@ -1,11 +1,29 @@
 function debounce(func, msec) {
-    let timer;
-    return (...args) => {
+    let timer
+    let pendingArgs
+    const debounced = (...args) => {
         clearTimeout(timer)
+        pendingArgs = args
         timer = setTimeout(() => {
-            func.apply(this, args)
+            timer = undefined
+            func.apply(this, pendingArgs)
+            pendingArgs = undefined
         }, msec)
     }
+    debounced.flush = () => {
+        if (timer) {
+            clearTimeout(timer)
+            timer = undefined
+            func.apply(this, pendingArgs)
+            pendingArgs = undefined
+        }
+    }
+    debounced.cancel = () => {
+        clearTimeout(timer)
+        timer = undefined
+        pendingArgs = undefined
+    }
+    return debounced
 }
 
 export default {
@@ -48,6 +66,7 @@ export default {
             this.textInput().onkeydown = (event) => {
                 if (event.code === "Enter") {
                     event.preventDefault()
+                    this.changeEvents.flush()
                 }
                 const options = Array.from(this.el.querySelectorAll('div[data-idx]'))
                 const visualOrder = options
@@ -65,6 +84,7 @@ export default {
                 if (text.length >= this.updateMinLen()) {
                     this.changeEvents(this.el.id, field, text)
                 } else {
+                    this.changeEvents.cancel()
                     this.pushEventTo(this.el, "options_clear", {})
                 }
             }

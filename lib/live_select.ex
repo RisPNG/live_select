@@ -432,7 +432,13 @@ defmodule LiveSelect do
 
   attr :user_defined_options, :boolean,
     default: Component.default_opts()[:user_defined_options],
-    doc: "if `true`, hitting enter will always add the text entered by the user to the selection"
+    doc:
+      "if `true`, hitting enter adds the text entered by the user to the selection unless a dropdown option has priority"
+
+  attr :dropdown_selectable_priority, :boolean,
+    default: Component.default_opts()[:dropdown_selectable_priority],
+    doc:
+      "if `true`, hitting enter while the dropdown is open selects its first selectable option before considering user-defined text"
 
   attr :allow_clear, :boolean,
     doc:

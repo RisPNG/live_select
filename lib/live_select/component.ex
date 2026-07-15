@@ -27,6 +27,7 @@ defmodule LiveSelect.Component do
     container_extra_class: nil,
     debounce: 100,
     disabled: false,
+    dropdown_selectable_priority: false,
     dropdown_class: nil,
     dropdown_extra_class: nil,
     max_selectable: 0,
@@ -94,6 +95,7 @@ defmodule LiveSelect.Component do
       |> assign(
         active_option: -1,
         hide_dropdown: true,
+        pending_enter: false,
         awaiting_update: true,
         selection: [],
         value_mapper: & &1
@@ -192,6 +194,13 @@ defmodule LiveSelect.Component do
           input_event: true,
           current_text: new_current_text_after_selection(socket)
         })
+      else
+        socket
+      end
+
+    socket =
+      if Map.has_key?(assigns, :options) && socket.assigns.pending_enter do
+        select_on_enter(socket, default_visual_order(socket.assigns))
       else
         socket
       end
@@ -323,8 +332,9 @@ defmodule LiveSelect.Component do
   end
 
   @impl true
-  def handle_event("keydown", %{"key" => "Enter"}, socket) do
-    {:noreply, maybe_select(socket)}
+  def handle_event("keydown", %{"key" => "Enter"} = params, socket) do
+    visual_order = Map.get(params, "visual_order", default_visual_order(socket.assigns))
+    {:noreply, select_on_enter(socket, visual_order)}
   end
 
   @impl true
@@ -434,6 +444,28 @@ defmodule LiveSelect.Component do
         raise ~s(Invalid assign: "#{assign}". Did you mean "#{most_similar}" ?)
       end
     end
+  end
+
+  defp select_on_enter(%{assigns: %{awaiting_update: true}} = socket, _visual_order) do
+    assign(socket, :pending_enter, true)
+  end
+
+  defp select_on_enter(socket, visual_order) do
+    socket =
+      if socket.assigns.dropdown_selectable_priority &&
+           !socket.assigns.hide_dropdown &&
+           socket.assigns.active_option == -1 do
+        case selectable_in_visual_order(socket.assigns, visual_order) do
+          [first_selectable | _] -> assign(socket, :active_option, first_selectable)
+          [] -> socket
+        end
+      else
+        socket
+      end
+
+    socket
+    |> assign(:pending_enter, false)
+    |> maybe_select()
   end
 
   defp maybe_select(socket, extra_params \\ %{})
@@ -571,7 +603,13 @@ defmodule LiveSelect.Component do
   end
 
   defp clear_options(socket) do
-    assign(socket, current_text: "", options: [], active_option: -1)
+    assign(socket,
+      active_option: -1,
+      awaiting_update: false,
+      current_text: "",
+      options: [],
+      pending_enter: false
+    )
   end
 
   defp client_select(socket, extra_params) do

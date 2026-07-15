@@ -68,6 +68,7 @@ defmodule LiveSelectWeb.ShowcaseLive do
       field(:allow_clear, :boolean)
       field(:debounce, :integer, default: Component.default_opts()[:debounce])
       field(:disabled, :boolean)
+      field(:dropdown_selectable_priority, :boolean)
       field(:options_styled_as_checkboxes, :boolean)
       field(:max_selectable, :integer, default: Component.default_opts()[:max_selectable])
       field(:user_defined_options, :boolean)
@@ -108,6 +109,7 @@ defmodule LiveSelectWeb.ShowcaseLive do
           :allow_clear,
           :debounce,
           :disabled,
+          :dropdown_selectable_priority,
           :options_styled_as_checkboxes,
           :keep_options_on_select,
           :keep_label_on_select,
@@ -268,7 +270,9 @@ defmodule LiveSelectWeb.ShowcaseLive do
             <%= if value == true do %>
               <br />&nbsp;&nbsp; <span class="text-success">{key}</span>
             <% else %>
-              <br />&nbsp;&nbsp; <span class="text-success"><%= key %></span>=<span class="text-info"><%= @format_value.(value) %></span>
+              <br />&nbsp;&nbsp; <span class="text-success"><%= key %></span>=<span class="text-info"><%= @format_value.(
+                value
+              ) %></span>
             <% end %>
           <% end %>
           <br /><span class="text-success">&gt;</span>
@@ -297,7 +301,9 @@ defmodule LiveSelectWeb.ShowcaseLive do
             <%= if value == true do %>
               <br />&nbsp;&nbsp; <span class="text-success">{key}</span>
             <% else %>
-              <br />&nbsp;&nbsp; <span class="text-success"><%= key %></span>=<span class="text-info"><%= @format_value.(value) %></span>
+              <br />&nbsp;&nbsp; <span class="text-success"><%= key %></span>=<span class="text-info"><%= @format_value.(
+                value
+              ) %></span>
             <% end %>
           <% end %>
           <span class="text-success">/&gt;</span>
