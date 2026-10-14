@@ -312,15 +312,8 @@ defmodule LiveSelectTest do
 
     select_nth_option(live, 1)
 
-    assert element(live, selectors()[:text_input])
-           |> render()
-           |> Floki.parse_fragment!()
-           |> Floki.attribute("disabled") == ["disabled"]
-
-    assert element(live, selectors()[:hidden_input])
-           |> render()
-           |> Floki.parse_fragment!()
-           |> Floki.attribute("disabled") == ["disabled"]
+    assert has_element?(live, "#{selectors()[:text_input]}[disabled]")
+    assert has_element?(live, "#{selectors()[:hidden_input]}[disabled]")
 
     refute has_element?(live, selectors()[:clear_button])
   end
@@ -845,6 +838,7 @@ defmodule LiveSelectTest do
 
     options =
       render(live)
+      |> Floki.parse_document!()
       |> Floki.find("#{selectors()[:dropdown]} > li")
 
     assert length(options) > 0
@@ -864,6 +858,7 @@ defmodule LiveSelectTest do
 
     options =
       render(live)
+      |> Floki.parse_document!()
       |> Floki.find("#{selectors()[:dropdown]} > li")
 
     assert length(options) > 0
@@ -875,6 +870,7 @@ defmodule LiveSelectTest do
 
     tag =
       render(live)
+      |> Floki.parse_document!()
       |> Floki.find("#{selectors()[:tags_container]} > div")
       |> Floki.text()
 
@@ -1300,6 +1296,134 @@ defmodule LiveSelectTest do
     |> render_hook("option_click", %{idx: "-1"})
 
     refute_selected(live)
+  end
+
+  describe "when options have selected labels" do
+    @describetag :selected_label
+
+    setup %{conn: conn} do
+      options = [
+        %{label: "+1 United States (US)", selected_label: "+1", value: "US"},
+        %{label: "+1 Canada (CA)", selected_label: "+1", value: "CA"},
+        %{label: "+60 Malaysia (MY)", selected_label: "+60", value: "MY"}
+      ]
+
+      stub_options(options)
+
+      {:ok, live, _html} =
+        live(conn, "/?keep_label_on_select=true&keep_options_on_select=true&allow_clear=true")
+
+      %{live: live, options: options}
+    end
+
+    for method <- [:click, :key] do
+      @method method
+      test "#{method} selection keeps countries with equal dial codes distinct", %{live: live} do
+        type(live, "+1", update_min_len: 0)
+
+        assert render(live)
+               |> Floki.parse_document!()
+               |> Floki.find(selectors()[:dropdown_entries])
+               |> Enum.map(fn option -> option |> Floki.text() |> String.trim() end) ==
+                 ["+1 Canada (CA)", "+1 United States (US)", "+60 Malaysia (MY)"]
+
+        select_nth_option(live, 1, method: @method)
+        assert_selected_static(live, "+1", "CA")
+
+        assert_push_event(live, "select", %{
+          selection: [%{label: "+1 Canada (CA)", selected_label: "+1", value: "CA"}],
+          current_text: "+1"
+        })
+
+        element(live, selectors()[:text_input]) |> render_focus()
+        select_nth_option(live, if(@method == :key, do: 1, else: 2), method: @method)
+        assert_selected_static(live, "+1", "US")
+
+        assert_push_event(live, "select", %{
+          selection: [%{label: "+1 United States (US)", selected_label: "+1", value: "US"}],
+          current_text: "+1"
+        })
+      end
+    end
+
+    test "focus, blur, Escape, and clear use the selected display", %{live: live} do
+      type(live, "Malaysia")
+      select_nth_option(live, 3)
+      assert_selected_static(live, "+60", "MY")
+
+      element(live, selectors()[:text_input]) |> render_focus()
+      assert_set_text_field(live, "+60")
+      element(live, selectors()[:text_input]) |> render_click()
+      assert_set_text_field(live, "+60")
+      type(live, "Canada")
+      element(live, selectors()[:text_input]) |> render_blur()
+      assert_set_text_field(live, "+60")
+      assert_selected_static(live, "+60", "MY")
+
+      element(live, selectors()[:text_input]) |> render_focus()
+      type(live, "United States")
+      keydown(live, "Escape")
+      assert_set_text_field(live, "+60")
+
+      element(live, selectors()[:clear_button]) |> render_click()
+      assert_clear_selection(live)
+      element(live, selectors()[:text_input]) |> render_blur()
+      assert_set_text_field(live, "")
+    end
+
+    test "search text reaches the parent without being replaced by the selected label", %{
+      live: live,
+      options: options
+    } do
+      type(live, "+60")
+      select_nth_option(live, 3)
+
+      expect(LiveSelect.ChangeEventHandlerMock, :handle, fn %{"text" => "Canada"} = params, _ ->
+        send(self(), {:update_live_select, params, Enum.filter(options, &(&1.value == "CA"))})
+      end)
+
+      type(live, "Canada")
+
+      assert render(live)
+             |> Floki.parse_document!()
+             |> Floki.find(selectors()[:dropdown_entries])
+             |> Floki.text()
+             |> String.trim() == "+1 Canada (CA)"
+
+      assert_selected_static(live, "+60", "MY")
+      select_nth_option(live, 1)
+      assert_selected_static(live, "+1", "CA")
+    end
+
+    test "native value updates retain the selected label", %{live: live, options: options} do
+      send_update(live, options: options, value: "MY")
+      assert_selected_static(live, "+60", "MY")
+      assert_set_text_field(live, "+60")
+
+      send_update(live, value: "CA")
+      assert_selected_static(live, "+1", "CA")
+      assert_set_text_field(live, "+1")
+    end
+
+    test "selection recovery preserves selected and dropdown labels", %{live: live} do
+      render_change(live, "change", %{
+        "my_form" => %{"city_search" => Phoenix.json_library().encode!("MY")}
+      })
+
+      render_hook(element(live, selectors()[:container]), "selection_recovery", [
+        %{label: "+60 Malaysia (MY)", selected_label: "+60", value: "MY"}
+      ])
+
+      assert_selected_static(live, "+60", "MY")
+      element(live, selectors()[:text_input]) |> render_focus()
+      assert_set_text_field(live, "+60")
+
+      assert render(live)
+             |> Floki.parse_document!()
+             |> Floki.find(selectors()[:dropdown_entries])
+             |> Floki.text()
+             |> String.trim() == "+60 Malaysia (MY)"
+    end
   end
 
   describe "when keep_label_on_select = true" do

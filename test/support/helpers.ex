@@ -106,7 +106,7 @@ defmodule LiveSelect.TestHelpers do
         keydown(live, "Enter", opts)
 
       :click ->
-        option_selector = "#{component} li > div[data-idx=#{n - 1}]"
+        option_selector = "#{component} li > div[data-idx='#{n - 1}']"
 
         cond do
           has_element?(live, option_selector) ->
@@ -123,7 +123,7 @@ defmodule LiveSelect.TestHelpers do
   end
 
   def unselect_nth_option(live, n) do
-    selector = "#{@selectors[:tags_container]} button[data-idx=#{n - 1}]"
+    selector = "#{@selectors[:tags_container]} button[data-idx='#{n - 1}']"
 
     if has_element?(live, selector) do
       element(live, @selectors[:container])
@@ -265,6 +265,7 @@ defmodule LiveSelect.TestHelpers do
   def assert_selected_static(html, label, value \\ nil)
 
   def assert_selected_static(html, label, value) when is_binary(html) do
+    html = Floki.parse_document!(html)
     value = if value, do: value, else: label
 
     assert Floki.attribute(html, @selectors[:hidden_input], "value") == [encode_value(value)]
@@ -303,6 +304,7 @@ defmodule LiveSelect.TestHelpers do
   end
 
   def assert_selected_multiple_static(html, selection) when is_binary(html) do
+    html = Floki.parse_document!(html)
     normalized_selection = normalize_selection(selection)
 
     {values, tag_labels} =
@@ -355,6 +357,7 @@ defmodule LiveSelect.TestHelpers do
       when is_binary(html) and is_list(selected_class) do
     element_classes =
       html
+      |> Floki.parse_document!()
       |> Floki.attribute("ul > li", "class")
       |> Enum.map(&String.trim/1)
 
@@ -380,6 +383,7 @@ defmodule LiveSelect.TestHelpers do
       when is_binary(html) and is_list(available_class) do
     element_classes =
       html
+      |> Floki.parse_document!()
       |> Floki.attribute("ul > li", "class")
       |> Enum.map(&String.trim/1)
 
@@ -405,6 +409,7 @@ defmodule LiveSelect.TestHelpers do
       when is_binary(html) and is_list(unavailable_class) do
     element_classes =
       html
+      |> Floki.parse_document!()
       |> Floki.attribute("ul > li", "class")
       |> Enum.map(&String.trim/1)
 
@@ -450,13 +455,13 @@ defmodule LiveSelect.TestHelpers do
   end
 
   def assert_option_removable(live, n) do
-    selector = "#{@selectors[:tags_container]} button[data-idx=#{n - 1}]"
+    selector = "#{@selectors[:tags_container]} button[data-idx='#{n - 1}']"
 
     assert has_element?(live, selector)
   end
 
   def refute_option_removable(live, n) do
-    selector = "#{@selectors[:tags_container]} button[data-idx=#{n - 1}]"
+    selector = "#{@selectors[:tags_container]} button[data-idx='#{n - 1}']"
 
     refute has_element?(live, selector)
   end

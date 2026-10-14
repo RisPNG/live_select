@@ -337,14 +337,9 @@ defmodule LiveSelectTagsTest do
 
     select_nth_option(live, 1)
 
-    assert element(live, selectors()[:text_input])
-           |> render()
-           |> Floki.parse_fragment!()
-           |> Floki.attribute("disabled") == ["disabled"]
-
-    assert render(live)
-           |> Floki.parse_fragment!()
-           |> Floki.attribute(selectors()[:hidden_input], "disabled") == ["disabled"]
+    assert has_element?(live, "#{selectors()[:text_input]}[disabled]")
+    assert has_element?(live, "#{selectors()[:hidden_input]}[disabled]")
+    refute has_element?(live, "#{selectors()[:hidden_input]}:not([disabled])")
 
     assert render(live)
            |> Floki.parse_fragment!()
@@ -425,7 +420,7 @@ defmodule LiveSelectTagsTest do
 
     assert element(
              live,
-             "#my_form_city_search_custom_clear_tags_live_select_component button[data-idx=0]",
+             "#my_form_city_search_custom_clear_tags_live_select_component button[data-idx='0']",
              "custom clear button"
            )
            |> has_element?

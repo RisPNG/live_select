@@ -220,7 +220,7 @@ defmodule LiveSelect.Component do
         parent_event: socket.assigns[:"phx-blur"],
         current_text:
           if socket.assigns.mode == :single && socket.assigns.selection != [] do
-            List.first(socket.assigns.selection).label
+            label(:single, socket.assigns.selection)
           else
             ""
           end
@@ -243,7 +243,7 @@ defmodule LiveSelect.Component do
 
     display_text =
       if keep_label_on_select do
-        List.first(socket.assigns.selection).label
+        label(:single, socket.assigns.selection)
       else
         socket.assigns.current_text
       end
@@ -279,8 +279,12 @@ defmodule LiveSelect.Component do
     # Using this selection, we can restore the options and augment the current selection with the labels
 
     options =
-      for %{"label" => label, "value" => value} <- selection_from_client do
-        %{label: label, value: value}
+      for %{"label" => label, "value" => value} = option <- selection_from_client do
+        recovered = %{label: label, value: value}
+
+        if Map.has_key?(option, "selected_label"),
+          do: Map.put(recovered, :selected_label, option["selected_label"]),
+          else: recovered
       end
 
     json = Phoenix.json_library()
@@ -345,7 +349,7 @@ defmodule LiveSelect.Component do
       |> client_select(%{
         current_text:
           if(socket.assigns.mode == :single && socket.assigns.selection != [],
-            do: List.first(socket.assigns.selection).label
+            do: label(:single, socket.assigns.selection)
           )
       })
 
@@ -731,7 +735,7 @@ defmodule LiveSelect.Component do
     elements can be:
 
     atoms, strings or numbers
-    maps or keywords with keys: (:label, :value) or (:key, :value) and an optional key :tag_label
+    maps or keywords with keys: (:label, :value) or (:key, :value) and optional keys :selected_label or :tag_label
     2-element tuples
     """
   end
@@ -744,7 +748,7 @@ defmodule LiveSelect.Component do
 
   defp value(_), do: nil
 
-  defp label(:single, [%{label: label} | _]), do: label
+  defp label(:single, [%{label: label} = option | _]), do: option[:selected_label] || label
 
   defp label(_, _), do: nil
 
@@ -807,7 +811,7 @@ defmodule LiveSelect.Component do
   defp new_current_text_after_selection(socket) do
     cond do
       socket.assigns.mode == :single && socket.assigns.selection != [] ->
-        List.first(socket.assigns.selection).label
+        label(:single, socket.assigns.selection)
 
       keep_options_on_select?(socket) ->
         socket.assigns.current_text

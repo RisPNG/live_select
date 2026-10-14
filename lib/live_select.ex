@@ -83,7 +83,9 @@ defmodule LiveSelect do
 
   Please see [the styling section](styling.md) for details
 
-  ## Alternative tag labels
+  ## Alternative selected labels
+
+  In `:single` mode, set an option's `selected_label` to use different text in the selected input. The dropdown continues to show `label`, and `value` remains the submitted selection. For example, `%{label: "+60 Malaysia (MY)", selected_label: "+60", value: "MY"}` shows the full country label in the dropdown and only the dial code after selection. Focus, blur, Escape, and selection recovery retain the selected label. Options without `selected_label` keep using `label`.
 
   Sometimes, in `:tags` mode, you might want to use alternative labels for the tags. For example, you might want the labels in the tags to be shorter
   in order to save space. You can do this by specifying an additional `tag_label` key when passing options as map or keywords. For example, passing these options:
@@ -92,7 +94,7 @@ defmodule LiveSelect do
   [%{label: "New York", value: "NY", tag_label: "NY"}, %{label: "Barcelona", value: "BCN", tag_label: "BCN"}]
   ```
 
-  will result in "New York" and "Barcelona" being used for the options in the dropdown, while "NY" and "BCN" will be used for the tags (and the values).
+  will result in "New York" and "Barcelona" being used for the options in the dropdown, while "NY" and "BCN" will be used for the tags (and the values). `selected_label` applies only to single mode, while `tag_label` applies to tags and quick tags.
 
   ## Sticky options
 

@@ -61,6 +61,7 @@ defmodule LiveSelect.MixProject do
       {:phoenix_ecto, "~> 4.0", only: [:dev, :test, :demo]},
       {:ecto, "~> 3.8"},
       {:floki, ">= 0.30.0", only: :test},
+      {:lazy_html, ">= 0.1.0", only: :test},
       {:esbuild, "~> 0.4", only: [:dev, :test, :demo]},
       {:plug_cowboy, "~> 2.8", only: [:dev, :demo]},
       {:cowlib, ">= 2.16.1"},
