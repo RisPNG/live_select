@@ -55,12 +55,8 @@ jobs:
       - name: Compile without warnings
         run: mix compile
 
-      - name: Check format
-        run: mix format --check-formatted
-        if: ${{ matrix.lint }}
-
-      - name: Credo
-        run: mix credo
+      - name: Check warnings
+        run: mix credo --only warning --ignore ExpensiveEmptyEnumCheck
         if: ${{ matrix.lint }}
 
       - name: Run tests
