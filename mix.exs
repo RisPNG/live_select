@@ -64,7 +64,7 @@ defmodule LiveSelect.MixProject do
       {:lazy_html, ">= 0.1.0", only: :test},
       {:esbuild, "~> 0.4", only: [:dev, :test, :demo]},
       {:plug_cowboy, "~> 2.8", only: [:dev, :demo]},
-      {:cowlib, ">= 2.16.1"},
+      {:cowlib, ">= 2.16.1", only: [:dev, :demo]},
       {:faker, "~> 0.17", only: [:dev, :test]},
       {:tailwind, "~> 0.2", only: [:dev, :test, :demo]},
       {:ex_doc, "~> 0.27", only: :dev, runtime: false},
