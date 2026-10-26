@@ -1,34 +1,31 @@
 ---
 name: Bug report
-about: Create a report to help us improve
+about: Report a reproducible problem
 title: ''
 labels: ''
 assignees: ''
-
 ---
 
-**LiveSelect and LiveView versions**
-have you tried LiveSelect's and LiveView's latest versions? Please try them and see if the bug still occur
-which LiveSelect version are you on? (`mix deps | grep live_select`)
-which LiveView version are you on? (`mix deps | grep phoenix_live_view`)
+**Versions**
 
-**Describe the bug**
-A clear and concise description of what the bug is.
+Include your Elixir, Erlang/OTP, LiveSelect, Phoenix, and LiveView versions. Run `mise exec -- mix deps` to inspect your resolved dependencies. Check whether the problem still occurs after updating LiveSelect and LiveView.
 
-**Expected behavior**
-What were you expecting to happen?
+**Problem**
 
-**Actual behavior**
-What is actually going on instead?
+Describe what happened and the steps needed to reproduce it.
 
-**Screenshots**
-If applicable (in most cases it is), do add a screenshot (or even better, a GIF or a video) that describes the problem.
+**Expected behaviour**
 
-**Browsers**
-On which browsers did you notice the issue?
+Describe what you expected to happen.
 
-**Issue Repo**
-You have the best chances of someone fixing the issue if you include a minimal repo that reproduces the problem.
+**Browser**
+
+Include the browser and version where the problem occurs.
+
+**Reproduction**
+
+Link to a minimal consumer application that reproduces the problem. Include screenshots or a recording if they help explain it.
 
 **Additional context**
-Add any other context about the problem here.
+
+Include any other information needed to reproduce the problem.

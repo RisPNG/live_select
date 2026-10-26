@@ -3,313 +3,209 @@ defmodule LiveSelect do
 
   alias LiveSelect.Component
 
+  embed_templates("live_select.html", suffix: "_template")
+
   @moduledoc ~S"""
-  The `LiveSelect` component is rendered by calling the `live_select/1` function and passing it a form field.
-  LiveSelect creates a text input field in which the user can type text, and hidden input field(s) that will contain the value of the selected option(s).
+  A dynamic selection field for Phoenix LiveView.
 
-  Whenever the user types something in the text input, LiveSelect triggers a `live_select_change` event for your LiveView or LiveComponent.
-  The message has a `text` parameter containing the current text entered by the user, as well as `id` and `field` parameters with the id of the
-  LiveSelect component and the name of the LiveSelect form field, respectively.
-  Your job is to handle the event, retrieve the list of selectable options and then call `Phoenix.LiveView.send_update/3`
-  to send the list of options to LiveSelect. See the "Examples" section below for details, and check out the
-  [cheatsheet](https://hexdocs.pm/live_select/cheatsheet.html) for some useful tips.
+  Render `live_select/1` with a `Phoenix.HTML.FormField`. LiveSelect creates a text input for searching and hidden inputs containing the selected values. The search input's name and ID use the form field's name and ID with `_text_input` appended.
 
-  Selection can happen either using the keyboard, by navigating the options with the arrow keys and then pressing enter, or by
-  clicking an option with the mouse.
+  When the user types, LiveSelect sends `live_select_change` to the parent LiveView or the configured `phx-target`. Its parameters contain `text`, the search text, `id`, the LiveSelect component ID, and `field`, the form field ID. Handle this event, retrieve matching options, and send them to `LiveSelect.Component` with `Phoenix.LiveView.send_update/3`.
 
-  Whenever an option is selected, `LiveSelect` will trigger a standard `phx-change` event in the form. See the "Examples" section
-  below for details on how to handle the event. In `single` and `tags` mode, the content of the input text field and the list of selectable options are cleared on selection.
-  To suppress this behavior, use the `keep_options_on_select` flag in the assigns.
+  Users can navigate with the arrow keys, select with Enter, or click an option. Selecting or clearing a value triggers the form's normal change event. LiveSelect restores the current selection when the LiveView reconnects.
 
-  In single mode, if the configuration option `allow_clear` is set, the user can manually clear the selection by clicking on the `x` button on the input field.
-  In tags mode, single tags can be removed by clicking on them.
+  ## Selection modes
 
-  ## Single mode
+  - `:single` selects one option. Set `allow_clear` to display a button that clears it.
+  - `:tags` selects several options and displays removable tags above the search input.
+  - `:quick_tags` selects several options while keeping the dropdown open. Selected options can also be removed through the dropdown. The dropdown closes when focus leaves the component.
 
-  <img alt="demo" src="https://raw.githubusercontent.com/maxmarcon/live_select/main/priv/static/images/demo_single.gif" width="300" />
+  In tags and quick-tags modes, selected values are submitted as a list, like an HTML select with the `multiple` attribute. `max_selectable` limits the selection, and `0` permits any number of entries.
 
-  ## Tags mode
-
-  <img alt="demo" src="https://raw.githubusercontent.com/maxmarcon/live_select/main/priv/static/images/demo_tags.gif" width="300" />
-
-  When `:tags` mode is enabled `LiveSelect` allows the user to select multiple entries. The entries will be visible above the text input field as removable tags.
-
-  The selected entries will be passed to your live view's `change` and `submit` event handlers as a list of entries, just like an [HTML <select> element with multiple attribute](https://developer.mozilla.org/en-US/docs/Web/HTML/Attributes/multiple) would do.
-
-  ## Quick tags mode
-
-  <img alt="demo" src="https://raw.githubusercontent.com/maxmarcon/live_select/main/priv/static/images/demo_quick_tags.gif" width="300" />
-
-  When `:quick_tags` mode is enabled, the user can select multiple entries, but the dropdown stays open after selection.
-  This allows the user to select additional entries in quick succession. Also, the entries can be deselected via the dropdown (as well as by clicking on the removable tags).
-  The dropdown closes when the `LiveSelect` element loses focus.
+  Single and tags modes clear the search options after selection unless `keep_options_on_select` is set. Quick-tags mode preserves the options. In single mode, `keep_label_on_select` keeps the selected label visible while the input is focused.
 
   ## Options
 
-  You can set the initial list of options the user can choose from with the `options` assign.
-  Afterwards, you can update the options at any time using `Phoenix.LiveView.send_update/3`.
-  Each option will be assigned a label, which will be shown in the dropdown, and a value, which will be the value of the
-  LiveSelect input when the option is selected.
+  Use `options` for the initial options. After the first render, send changes through `Phoenix.LiveView.send_update/3`. Rerendering the parent form does not replace the component's current options.
 
-  `options` can be any enumeration of the following elements:
+  `options` accepts an enumerable containing:
 
-  * _atoms, strings or numbers_: In this case, each element will be both label and value for the option
-  * _tuples_: `{label, value}` corresponding to label and value for the option
-  * _maps_: `%{label: label, value: value}` or `%{value: value}`
-  * _keywords_: `[label: label, value: value]` or `[value: value]`
+  - Atoms, strings, or numbers, used as both the label and value.
+  - Tuples, such as `{label, value}` or `{label, value, disabled}`.
+  - Maps, such as `%{label: label, value: value}` or `%{value: value}`.
+  - Keyword lists, such as `[label: label, value: value]` or `[value: value]`.
 
-  Options can also be disabled when passing in tuples, maps or keywords. Disabled options are displayed, but can't be selected.
-  Maps and keywords need a `:disabled` key with a boolean value, and tuples should be a 3 element tuple of `{label, value, is_disabled}`
+  Maps and keyword lists without `label` use the value as the label. An enumerable of tuples can also be supplied as a map or keyword list. For example, `%{Red: 1, Yellow: 2, Green: 3}` provides labels `:Red`, `:Yellow`, and `:Green`, with values `1`, `2`, and `3`.
 
-  In the case of maps and keywords, if only `value` is specified, it will be used as both value and label for the option.
+  Set `disabled: true` on a map or keyword option, or use a 3-element tuple, to display an option that cannot be selected. In tags and quick-tags modes, set `sticky: true` on a map or keyword option to prevent users from removing a selected tag. Programmatic `value` updates can still replace the selection.
 
-  Because you can pass a list of tuples, you can use maps and keyword lists to pass the list of options, for example:
-
-  ```
-  %{Red: 1, Yellow: 2, Green: 3}
-  ```
-
-  Will result in 3 options with labels `:Red`, `:Yellow`, `:Green` and values 1, 2, and 3.
-
-  Note that the option values, if they are not strings, will be JSON-encoded. Your LiveView will receive this JSON-encoded version in the `phx-change` and `phx-submit` events.
-
-  ## Styling
-
-  `LiveSelect` supports 3 styling modes:
-
-  * `tailwind`: uses standard tailwind utility classes (the default)
-  * `daisyui`: uses [daisyUI](https://daisyui.com/) classes.
-  * `none`: no styling at all.
-
-  Please see [the styling section](styling.md) for details
+  Scalar values are submitted through ordinary form inputs. Composite values, such as maps and lists, are JSON-encoded. Use `decode/1` on the received parameters before passing composite values to your application's form handling code. LiveSelect uses the JSON library configured by Phoenix.
 
   ## Alternative selected labels
 
-  In `:single` mode, set an option's `selected_label` to use different text in the selected input. The dropdown continues to show `label`, and `value` remains the submitted selection. For example, `%{label: "+60 Malaysia (MY)", selected_label: "+60", value: "MY"}` shows the full country label in the dropdown and only the dial code after selection. Focus, blur, Escape, and selection recovery retain the selected label. Options without `selected_label` keep using `label`.
+  In single mode, `selected_label` changes the text shown after selection while `label` remains the dropdown label:
 
-  Sometimes, in `:tags` mode, you might want to use alternative labels for the tags. For example, you might want the labels in the tags to be shorter
-  in order to save space. You can do this by specifying an additional `tag_label` key when passing options as map or keywords. For example, passing these options:
-
-  ```
-  [%{label: "New York", value: "NY", tag_label: "NY"}, %{label: "Barcelona", value: "BCN", tag_label: "BCN"}]
+  ```elixir
+  %{label: "+60 Malaysia (MY)", selected_label: "+60", value: "MY"}
   ```
 
-  will result in "New York" and "Barcelona" being used for the options in the dropdown, while "NY" and "BCN" will be used for the tags (and the values). `selected_label` applies only to single mode, while `tag_label` applies to tags and quick tags.
+  This option shows `+60 Malaysia (MY)` in the dropdown and `+60` in the selected input, and submits `MY`. Focus, blur, Escape, and selection recovery retain the selected label. Options without `selected_label` use `label`.
 
-  ## Sticky options
+  Use `tag_label` for a shorter tag label in tags and quick-tags modes:
 
-  Add  the `sticky: true` flag to an option to prevent it from being removed from the selection:
-
-  ```
-  [%{label: "New York", value: "NY", sticky: true}]
+  ```elixir
+  [%{label: "New York", value: "NY", tag_label: "NY"}]
   ```
 
-  Now, whenever the selection contains "New York", the option will stick and the user won't be able to remove it.
+  ## Styling
+
+  `style` supports `:tailwind` (the default), `:daisyui`, and `:none`. The consuming application provides its own CSS build. See the [styling guide](styling.md) for source scanning, defaults, and class overrides.
 
   ## Slots
 
-  ### Options and tags
+  The `:option` and `:tag` slots receive the normalized option through `:let`. Options passed to the `:option` slot also contain `selected`, a boolean indicating whether the value is already selected.
 
-  You can control how your options and tags are rendered by using the `:option` and `:tag` slots.
-  Both slots will be passed an option as argument. In the case of the `:option` slot, the option will have an
-  extra boolean field `:selected`, which will be set to `true` if the option has been selected by the user.
+  The following layout places an icon and label in explicit grid tracks. `globe/1` and `check/1` represent icon components supplied by the consuming application:
 
-  Let's say you want to show some fancy icons next to each option in the dropdown and the tags:
-
-  ```elixir
-  <.live_select
-          field={@form[:city_search]}
-          phx-target={@myself}
-          mode={:tags}
-        >
-          <:option :let={option}>
-            <div class="flex">
-              <.globe />&nbsp;<%= option.label %>
-            </div>
-          </:option>
-          <:tag :let={option}>
-              <.check />&nbsp;<%= option.label %>
-          </:tag>
+  ```heex
+  <.live_select field={@form[:city_search]} phx-target={@myself} mode={:tags}>
+    <:option :let={option}>
+      <div class="grid grid-cols-[1rem_1fr] items-center gap-1">
+        <.globe />
+        <span>{option.label}</span>
+      </div>
+    </:option>
+    <:tag :let={option}>
+      <span class="grid grid-cols-[1rem_1fr] items-center gap-1">
+        <.check />
+        <span>{option.label}</span>
+      </span>
+    </:tag>
   </.live_select>
   ```
 
-  Here's the result:
+  The `:clear_button` slot supplies the content of the button used to clear a single selection or remove a tag:
 
-  <img alt="slots" src="https://raw.githubusercontent.com/maxmarcon/live_select/main/priv/static/images/slots.png" width="200" />
-
-  ### Clear button
-
-  You can use the `:clear_button` slot to directly specify the inner HTML
-  of the button that clears the tags or the single selection (if `allow_clear` is set).
-
-  Example:
-
-  ```elixir
-  <.live_select
-      field={@form[:city_search]}
-      phx-target={@myself}
-    >
-      <:clear_button>
-        This my fancy clear button
-      </:clear_button>
+  ```heex
+  <.live_select field={@form[:city_search]} allow_clear>
+    <:clear_button>
+      Clear
+    </:clear_button>
   </.live_select>
   ```
 
-  ## Controlling the selection programmatically
+  Set `no_basic_styles_for_clear_buttons` when your custom button requires its own size and positioning.
 
-  You can always control the selection programmatically, overriding the current user-selected values,
-  by sending a `:value` update to `LiveSelect` via `Phoenix.LiveView.send_update/3`:
+  ## Controlling the selection
 
-  ```
+  Send a `value` update to replace the selection and trigger a form change event:
+
+  ```elixir
   send_update(LiveSelect.Component, id: live_select_id, value: new_selection)
   ```
 
-  `new_selection` must be a single element in `:single` mode, a list in `:tags` mode. If it's `nil`, the selection will be cleared.
-  After updating the selection, `LiveSelect` will trigger a change event in the form.
+  Use a single value in single mode and a list in tags or quick-tags mode. Passing `nil` clears the selection. The `value` assign can also provide an initial selection and takes precedence over the form field's value.
 
-  To set a custom id for the component to use with `Phoenix.LiveView.send_update/3`, you can pass the `id` assign to `live_select/1`.
+  Pass `id` to set the component ID explicitly. Otherwise, the ID is `#{form_name}_#{field}_live_select_component`.
 
+  ## Single selection example
 
-  ## Examples
+  This example searches for cities and submits the selected city's coordinates. The form has the name `my_form`, and the field is `city_search`:
 
-  These examples describe all the moving parts in detail. You can see these examples in action, see which messages and events are being sent, and play around
-  with the configuration easily with the [showcase app](https://github.com/maxmarcon/live_select#showcase-app).
-
-  ### Single mode
-
-  The user can search for cities.
-  The LiveSelect main form input is called `city_search`.
-  When a city is selected, the coordinates of that city will be the value of the form input.
-  The name of the selected city is available in the text input field named `city_search_text_input`.
-
-  _Template:_
-  ```
+  ```heex
   <.form for={@form} phx-change="change">
     <.live_select field={@form[:city_search]} />
   </.form>
   ```
 
-  > #### Forms implemented in LiveComponents {: .warning}
-  >
-  > If your form is implemented in a LiveComponent and not in a LiveView, you have to add the `phx-target` attribute
-  > when rendering LiveSelect:
-  >
-  > ```elixir
-  >  <.live_select field={@form[:city_search]} phx-target={@myself} />
-  > ```
+  If the target is a LiveComponent, pass `phx-target={@myself}` to LiveSelect and the form. Handle the search event in that target:
 
-  _LiveView or LiveComponent that is the target of the form's events:_
-  ```
+  ```elixir
   @impl true
-  def handle_event("live_select_change", %{"text" => text, "id" => live_select_id}, socket) do
-      cities = City.search(text)
-      # cities could be:
-      # [ {"city name 1", [lat_1, long_1]}, {"city name 2", [lat_2, long_2]}, ... ]
-      #
-      # but it could also be (no coordinates in this case):
-      # [ "city name 1", "city name 2", ... ]
-      #
-      # or:
-      # [ [label: "city name 1", value: [lat_1, long_1]], [label: "city name 2", value: [lat_2, long_2]], ... ]
-      #
-      # or even:
-      # ["city name 1": [lat_1, long_1], "city name 2": [lat_2, long_2]]
+  def handle_event("live_select_change", %{"text" => text, "id" => id}, socket) do
+    options = City.search(text)
 
-      send_update(LiveSelect.Component, id: live_select_id, options: cities)
+    send_update(LiveSelect.Component, id: id, options: options)
 
-      {:noreply, socket}
+    {:noreply, socket}
   end
 
   @impl true
-  def handle_event(
-      "change",
-      %{"my_form" => %{"city_search_text_input" => city_name, "city_search" => city_coords}},
-      socket
-    ) do
-      IO.puts("You selected city #{city_name} located at: #{city_coords}")
-
-      {:noreply, socket}
+  def handle_event("change", %{"my_form" => %{"city_search" => value}}, socket) do
+    {:noreply, assign(socket, city_coordinates: LiveSelect.decode(value))}
   end
   ```
 
-  ### Tags mode
+  `City.search/1` represents your application's search function. It can return `[{"New York City", [-74.00597, 40.71427]}]`. The coordinates are submitted as JSON and decoded into a list. The selected text is also available in the `city_search_text_input` parameter.
 
-  Let's say you want to build on the previous example and allow the user to select multiple cities and not only one.
-  The `:tags` mode allows you to do exactly this.
+  ## Multiple selection example
 
-  _Template:_
-  ```
+  Set `mode={:tags}` to submit several cities:
+
+  ```heex
   <.form for={@form} phx-change="change">
     <.live_select field={@form[:city_search]} mode={:tags} />
   </.form>
   ```
 
-  _LiveView or LiveComponent that is the target of the form's events:_
-  ```
+  The change handler receives a list of JSON-encoded coordinate lists, or no field when the selection is empty:
+
+  ```elixir
   @impl true
-  def handle_event(
-      "change",
-      %{"my_form" => %{"city_search" => list_of_coords}},
-      socket
-    ) do
-    # list_of_coords will contain the list of the JSON-encoded coordinates of the selected cities, for example:
-    # ["[-46.565,-23.69389]", "[-48.27722,-18.91861]"]
+  def handle_event("change", %{"my_form" => params}, socket) do
+    coordinates = LiveSelect.decode(params["city_search"])
 
-    IO.puts("You selected cities located at: #{list_of_coords}")
-
-    {:noreply, socket}
+    {:noreply, assign(socket, city_coordinates: coordinates)}
   end
   ```
 
-  ### Multiple LiveSelect inputs in the same LiveView
+  Use `mode={:quick_tags}` with the same change handler to keep the dropdown open between selections.
 
-  If you have multiple LiveSelect inputs in the same LiveView, you can distinguish them based on the field id.
-  For example:
+  ## Several fields in one LiveView
 
-  _Template:_
-  ```
+  The search event's `field` parameter distinguishes fields when they share the same callback:
+
+  ```heex
   <.form for={@form} phx-change="change">
     <.live_select field={@form[:city_search]} />
     <.live_select field={@form[:album_search]} />
   </.form>
   ```
 
-  _LiveView or LiveComponent:_
-  ```
+  ```elixir
   @impl true
-  def handle_event("live_select_change", %{"text" => text, "id" => live_select_id, "field" => live_select_field}, socket) do
+  def handle_event("live_select_change", %{"text" => text, "id" => id, "field" => field}, socket) do
     options =
-      case live_select_field do
-        "form_name_city_search" -> City.search(text)
-        "form_name_album_search" -> Album.search(text)
+      case field do
+        "my_form_city_search" -> City.search(text)
+        "my_form_album_search" -> Album.search(text)
       end
 
-    send_update(LiveSelect.Component, id: live_select_id, options: options)
+    send_update(LiveSelect.Component, id: id, options: options)
 
     {:noreply, socket}
   end
   ```
 
-  ## Using LiveSelect with associations and embeds
+  ## Associations and embeds
 
-  LiveSelect can also be used to display and select associations or embeds without too much effort.
-  Let's say you have the following schemas:
+  LiveSelect supports Ecto association and embed values. Map them to options, then decode submitted values before casting them in the consuming application.
 
-  ```
+  The following schemas represent a temporary search form, so they do not persist records or require database timestamps:
+
+  ```elixir
   defmodule City do
-    @moduledoc false
-
     use Ecto.Schema
 
     import Ecto.Changeset
 
     @primary_key false
     embedded_schema do
-      field(:name)
-      field(:pos, {:array, :float})
+      field :name, :string
+      field :pos, {:array, :float}
     end
 
-    def changeset(%__MODULE__{} = schema \\ %__MODULE__{}, params) do
+    def changeset(schema \\ %__MODULE__{}, params) do
       cast(schema, params, [:name, :pos])
     end
   end
@@ -320,191 +216,161 @@ defmodule LiveSelect do
     import Ecto.Changeset
 
     embedded_schema do
-      embeds_many(:city_search, City, on_replace: :delete)
+      embeds_many :city_search, City, on_replace: :delete
     end
 
     def changeset(schema \\ %__MODULE__{}, params) do
-      cast(schema, params, [])
+      schema
+      |> cast(params, [])
       |> cast_embed(:city_search)
     end
   end
   ```
 
-  Each city has a name and an array with coordinates - we want `LiveSelect` to display the name as label in the dropdown and in the tags, but we want
-  the entire data structure (name + coordinates) to be sent to the server when the user selects.
+  `value_mapper` receives each value from the form and returns the corresponding option. Return JSON-encodable values, such as a map containing the city's name and coordinates:
 
-  In order for this to work, we need to:
-
-  1. Map `City` structs to the options expected by `LiveSelect`
-  2. Decode `City` JSON objects sent by the client
-
-  We do (1) by passing a `value_mapper` assign to `LiveSelect`. This is a 1-arity function that expects the struct and maps it to the option that `LiveSelect` should use:
-
-  ```
-  <.live_select field={@form[:city_search]} value_mapper={&value_mapper/1} mode={:tags} />
+  ```heex
+  <.live_select
+    field={@form[:city_search]}
+    mode={:tags}
+    value_mapper={fn city -> %{label: city.name, value: %{name: city.name, pos: city.pos}} end}
+  />
   ```
 
-  ```
-  defp value_mapper(%City{name: name} = value) do
-    %{label: name, value: value}
-  end
-  ```
+  Map search results into the same shape when handling search events:
 
-  As you can see, the label is the name of the city whereas the value is the entire struct. This is because we want to be able to recreate the struct from the value, so we need everything. `LiveSelect`
-  uses `value_mapper/1` to map the values set in the form to the options expected by `LiveSelect`.
-
-  You can also use the `value_mapper/1` function to map values to options when updating the list of options while handling `live_select_change`:
-
-  ```
-  def handle_event("live_select_change", %{"text" => text, "id" => live_select_id}, socket) do
+  ```elixir
+  @impl true
+  def handle_event("live_select_change", %{"text" => text, "id" => id}, socket) do
     options =
-      retrieve_options()
-      |> Enum.map(&value_mapper/1)
+      City.search(text)
+      |> Enum.map(fn city -> %{label: city.name, value: %{name: city.name, pos: city.pos}} end)
 
-    send_update(LiveSelect.Component, id: live_select_id, options: options)
+    send_update(LiveSelect.Component, id: id, options: options)
 
     {:noreply, socket}
   end
-  ```
 
-  > #### IMPORTANT: the output of the `value_mapper/1` function should be JSON-encodable {: .warning}
-
-  Finally, in order to take care of (2) you need to decode the JSON-encoded list of options that's coming from the client before you can
-  cast them to create a changeset. To do so, `LiveSelect` offers a convenience function called `LiveSelect.decode/1`:
-  ```
-  def handle_event("change", params, socket) do
-    # decode will JSON-decode the value in city_search, handling the type of selection
-    # and taking care of special values such as "" and nil
-    params = update_in(params, ~w(city_search_form city_search), &LiveSelect.decode/1)
-
-    # now we can cast the params:
+  @impl true
+  def handle_event("change", %{"city_search_form" => params}, socket) do
+    params = Map.update(params, "city_search", [], &LiveSelect.decode/1)
     changeset = CitySearchForm.changeset(params)
 
     {:noreply, assign(socket, form: to_form(changeset))}
   end
   ```
 
-  That's it! Now Your form with embeds selected and displayed with `LiveSelect` should work
+  The selected cities are JSON-decoded before `cast_embed/3` receives them. The same mapping and decoding pattern applies to associations owned by the consuming application.
   """
 
   @doc ~S"""
-  Renders a `LiveSelect` input in a form.
+  Renders a LiveSelect input for a form field.
 
-  [INSERT LVATTRDOCS]
-
-  ## Styling attributes
-
-  * See [the styling section](styling.md) for details
+  See the [styling guide](styling.md) for the class attributes.
   """
   @doc type: :component
 
-  attr :field, :any,
-    required: true,
-    doc: "a Phoenix.HTML.FormField struct identifying the form's field"
+  attr(:field, :any, required: true, doc: "the Phoenix.HTML.FormField to render")
+  attr(:form, :any, doc: false)
 
-  attr :id, :string,
-    doc:
-      ~S(an id to assign to the component. If none is provided, `#{form_name}_#{field}_live_select_component` will be used)
-
-  attr :mode, :atom,
-    values: [:single, :tags, :quick_tags],
-    default: Component.default_opts()[:mode],
-    doc:
-      "either `:single` (for single selection), `:tags` (for multiple selection using tags), or `:quick_tags` (multiple selection but tags can be selected/deselected in quick succession)"
-
-  attr :options, :list,
-    doc:
-      ~s(initial available options to select from. Note that, after the initial rendering of the component, options can only be updated using `Phoenix.LiveView.send_update/3` - See the "Options" section for details)
-
-  attr :keep_options_on_select, :boolean,
-    doc:
-      ~s(if `true`, the current list of selectable options and the content of the input text field are preserved upon selection)
-
-  attr :keep_label_on_select, :boolean,
-    default: Component.default_opts()[:keep_label_on_select],
-    doc:
-      ~s(if `true`, when in single mode, the input text field is preserved to the active label upon selection.)
-
-  attr :value, :any, doc: "used to manually set a selection - overrides any values from the form.
-  Must be a single element in `:single` mode, or a list of elements in `:tags` mode."
-
-  attr :max_selectable, :integer,
-    default: Component.default_opts()[:max_selectable],
-    doc: "limits the maximum number of selectable elements. `0` means unlimited"
-
-  attr :user_defined_options, :boolean,
-    default: Component.default_opts()[:user_defined_options],
-    doc:
-      "if `true`, hitting enter adds the text entered by the user to the selection unless a dropdown option has priority"
-
-  attr :dropdown_selectable_priority, :boolean,
-    default: Component.default_opts()[:dropdown_selectable_priority],
-    doc:
-      "if `true`, hitting enter while the dropdown is open selects its first selectable option before considering user-defined text"
-
-  attr :allow_clear, :boolean,
-    doc:
-      ~s(if `true`, when in single mode, display a "x" button in the input field to clear the selection)
-
-  attr :disabled, :boolean, doc: "set this to `true` to disable the component"
-
-  attr :placeholder, :string, doc: "placeholder text for the input field"
-
-  attr :debounce, :integer,
-    default: Component.default_opts()[:debounce],
-    doc:
-      ~S(number of milliseconds to wait after the last keystroke before triggering a "live_select_change" event)
-
-  attr :value_mapper, :any,
-    doc:
-      ~s(function used to map the values from a form to LiveSelect options. Important: the output of this function should be JSON-encodable)
-
-  attr :update_min_len, :integer,
-    default: Component.default_opts()[:update_min_len],
-    doc:
-      "the minimum length of text in the text input field that will trigger an update of the dropdown."
-
-  attr :style, :atom,
-    values: [:tailwind, :daisyui, :none],
-    default: Component.default_opts()[:style],
-    doc:
-      "one of `:tailwind`, `:daisyui` or `:none`. See the [Styling section](styling.html) for details"
-
-  slot(:option,
-    doc:
-      "optional slot that renders an option in the dropdown. The option's data is available via `:let`"
+  attr(:id, :string,
+    doc: ~S(the component ID, defaulting to `#{form_name}_#{field}_live_select_component`)
   )
 
-  slot(:tag, doc: "optional slot that renders a tag. The option's data is available via `:let`")
+  attr(:mode, :atom,
+    values: [:single, :tags, :quick_tags],
+    default: :single,
+    doc: "single selection, removable tags, or tags with a dropdown that stays open"
+  )
 
-  slot(:clear_button, doc: "optional slot to render a custom clear button")
-
-  attr :"phx-target", :any,
-    doc: "Optional target for events. Usually the same target as the form's"
-
-  attr :"phx-blur", :string,
+  attr(:options, :any,
     doc:
-      "Event to emit when the text input loses focus. The component id will be sent in the event's params"
+      "the initial enumerable of options, updated after rendering with Phoenix.LiveView.send_update/3"
+  )
 
-  attr :"phx-focus", :string,
-    doc:
-      "Event to emit when the text input receives focus. The component id will be sent in the event's params"
+  attr(:keep_options_on_select, :boolean,
+    doc: "preserve the current options and search text after selection"
+  )
 
-  attr :no_basic_styles_for_clear_buttons, :boolean,
-    doc: "Do not apply basic size and positioning styles to clear buttons"
+  attr(:keep_label_on_select, :boolean,
+    default: false,
+    doc: "keep the selected label visible while the single-mode input is focused"
+  )
 
-  @styling_options ~w(active_option_class available_option_class unavailable_option_class clear_button_class clear_button_extra_class clear_tag_button_class clear_tag_button_extra_class container_class container_extra_class dropdown_class dropdown_extra_class option_class option_extra_class text_input_class text_input_extra_class text_input_selected_class selected_option_class tag_class tag_extra_class tags_container_class tags_container_extra_class)a
+  attr(:value, :any,
+    doc: "override the form selection with one value in single mode or a list in tags modes"
+  )
 
-  for attr_name <- @styling_options do
-    Phoenix.Component.Declarative.__attr__!(
-      __MODULE__,
-      attr_name,
-      :any,
-      [doc: false],
-      __ENV__.line,
-      __ENV__.file
-    )
-  end
+  attr(:max_selectable, :integer,
+    default: 0,
+    doc: "the maximum number of selections, or 0 for unlimited selections"
+  )
+
+  attr(:user_defined_options, :boolean,
+    default: false,
+    doc: "allow Enter to select the search text when no dropdown option has priority"
+  )
+
+  attr(:dropdown_selectable_priority, :boolean,
+    default: false,
+    doc: "give the first selectable dropdown option priority over user-defined text on Enter"
+  )
+
+  attr(:allow_clear, :boolean, doc: "display a button to clear a single selection")
+  attr(:disabled, :boolean, doc: "disable the component")
+  attr(:placeholder, :string, doc: "the search input's placeholder")
+
+  attr(:debounce, :integer,
+    default: 100,
+    doc: "the delay in milliseconds after typing before sending live_select_change"
+  )
+
+  attr(:value_mapper, :any, doc: "a callback mapping each form value to a JSON-encodable option")
+
+  attr(:update_min_len, :integer,
+    default: 1,
+    doc: "the minimum search text length that triggers an option update"
+  )
+
+  attr(:style, :atom,
+    values: [:tailwind, :daisyui, :none],
+    default: :tailwind,
+    doc: "the built-in style, or :none for application-provided CSS"
+  )
+
+  attr(:"phx-target", :any, doc: "the target for search, focus, and blur events")
+  attr(:"phx-blur", :string, doc: "an event sent on blur with the component ID")
+  attr(:"phx-focus", :string, doc: "an event sent on focus with the component ID")
+
+  attr(:no_basic_styles_for_clear_buttons, :boolean,
+    doc: "let application styles control clear-button sizing and positioning"
+  )
+
+  attr(:active_option_class, :any, doc: false)
+  attr(:available_option_class, :any, doc: false)
+  attr(:unavailable_option_class, :any, doc: false)
+  attr(:clear_button_class, :any, doc: false)
+  attr(:clear_button_extra_class, :any, doc: false)
+  attr(:clear_tag_button_class, :any, doc: false)
+  attr(:clear_tag_button_extra_class, :any, doc: false)
+  attr(:container_class, :any, doc: false)
+  attr(:container_extra_class, :any, doc: false)
+  attr(:dropdown_class, :any, doc: false)
+  attr(:dropdown_extra_class, :any, doc: false)
+  attr(:option_class, :any, doc: false)
+  attr(:option_extra_class, :any, doc: false)
+  attr(:text_input_class, :any, doc: false)
+  attr(:text_input_extra_class, :any, doc: false)
+  attr(:text_input_selected_class, :any, doc: false)
+  attr(:selected_option_class, :any, doc: false)
+  attr(:tag_class, :any, doc: false)
+  attr(:tag_extra_class, :any, doc: false)
+  attr(:tags_container_class, :any, doc: false)
+  attr(:tags_container_extra_class, :any, doc: false)
+
+  slot(:option, doc: "a dropdown option, provided through :let with its selected state")
+  slot(:tag, doc: "a selected tag, provided through :let")
+  slot(:clear_button, doc: "custom content for selection and tag clear buttons")
 
   def live_select(assigns) do
     assigns =
@@ -518,7 +384,8 @@ defmodule LiveSelect do
             "instead of passing separate form and field attributes, pass a single field attribute of type Phoenix.HTML.FormField"
           )
 
-          to_form(form)[field]
+          form = if is_atom(form), do: to_form(%{}, as: form), else: to_form(form)
+          form[field]
 
         _, _ ->
           raise "if you pass field as atom or string, you also have to pass a form"
@@ -526,36 +393,33 @@ defmodule LiveSelect do
       |> assign_new(:id, fn %{field: field} ->
         "#{field.form.name}_#{field.field}_live_select_component"
       end)
-      |> assign(module: LiveSelect.Component)
+      |> assign(module: Component)
 
-    ~H"""
-    <.live_component {assigns} />
-    """
+    live_select_template(assigns)
   end
 
   @doc ~S"""
-  Decodes the selection from the client. This has to be used when the values in the selection aren't simple integers or strings.
+  Decodes JSON-encoded selection values received through form parameters.
 
-  Let's say you receive your params in the variable `params`, and your `LiveSelect` field is called `my_field` and belongs to the form `my_form`. Then you should
-  decode like this:
+  Use this for composite option values, such as maps or lists. A list of submitted values is decoded element by element. An absent tags field (`nil`) becomes an empty list, and an empty single field (`""`) becomes `nil`.
 
-  ```
+  ```elixir
   params = update_in(params, ~w(my_form my_field), &LiveSelect.decode/1)
   ```
 
-  ## Examples:
+  ## Examples
 
-    iex> decode(nil)
-    []
+      iex> decode(nil)
+      []
 
-    iex> decode("")
-    nil
+      iex> decode("")
+      nil
 
-    iex> decode("{\"name\":\"Berlin\",\"pos\":[13.41053,52.52437]}")
-    %{"name" => "Berlin","pos" => [13.41053,52.52437]}
+      iex> decode("{\"name\":\"Berlin\",\"pos\":[13.41053,52.52437]}")
+      %{"name" => "Berlin", "pos" => [13.41053, 52.52437]}
 
-    iex> decode(["{\"name\":\"New York City\",\"pos\":[-74.00597,40.71427]}","{\"name\":\"Stockholm\",\"pos\":[18.06871,59.32938]}"])
-    [%{"name" => "New York City","pos" => [-74.00597,40.71427]}, %{"name" => "Stockholm","pos" => [18.06871,59.32938]}]
+      iex> decode(["[-74.00597,40.71427]", "[18.06871,59.32938]"])
+      [[-74.00597, 40.71427], [18.06871, 59.32938]]
   """
   def decode(selection) do
     json = Phoenix.json_library()

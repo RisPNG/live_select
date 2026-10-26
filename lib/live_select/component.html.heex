@@ -12,143 +12,218 @@
     :if={@mode in [:tags, :quick_tags] && Enum.any?(@selection)}
     class={class(@style, :tags_container, @tags_container_class, @tags_container_extra_class)}
   >
-    <%= for {option, idx} <- Enum.with_index(@selection) do %>
-      <div class={class(@style, :tag, @tag_class, @tag_extra_class)}>
+    <div
+      :for={{option, idx} <- Enum.with_index(@selection)}
+      class={class(@style, :tag, @tag_class, @tag_extra_class)}
+    >
+      <div>
         <%= if @tag == [] do %>
-          <%= option[:tag_label] || option[:label] %>
+          {option[:tag_label] || option[:label]}
         <% else %>
-          <%= render_slot(@tag, option) %>
+          {render_slot(@tag, option)}
         <% end %>
-        <button
-          :if={!option[:sticky] && !@disabled}
-          type="button"
-          data-idx={idx}
-          class={
-            class(
-              @style,
-              :clear_tag_button,
-              @clear_tag_button_class,
-              @clear_tag_button_extra_class
-            ) ++
-              if @no_basic_styles_for_clear_buttons, do: [], else: ~w(ls-clear-tag-button)
-          }
-        >
-          <%= if @clear_button == [] do %>
-            <.x />
-          <% else %>
-            <%= render_slot(@clear_button) %>
-          <% end %>
-        </button>
       </div>
-    <% end %>
-  </div>
-
-  <div>
-    <%= text_input(@field.form, @text_input_field,
-      class:
-        class(@style, :text_input, @text_input_class, @text_input_extra_class) ++
-          List.wrap(
-            if(Enum.any?(@selection),
-              do: class(@style, :text_input_selected, @text_input_selected_class)
-            )
-          ),
-      placeholder: @placeholder,
-      phx_target: @myself,
-      phx_change: "change",
-      disabled: @disabled,
-      autocomplete: "off",
-      phx_focus: "focus",
-      phx_click: "click",
-      phx_blur: "blur",
-      value: label(@mode, @selection)
-    ) %>
-    <%= if @mode == :single && @allow_clear && !@disabled && Enum.any?(@selection) do %>
       <button
+        :if={!option[:sticky] && !@disabled}
         type="button"
-        phx-click="clear"
-        phx-target={@myself}
+        data-idx={idx}
+        aria-label="Remove selection"
+        style={
+          unless @no_basic_styles_for_clear_buttons,
+            do: "min-height: 1.25rem; min-width: 1.25rem"
+        }
         class={
-          class(@style, :clear_button, @clear_button_class, @clear_button_extra_class) ++
-            if @no_basic_styles_for_clear_buttons, do: [], else: ~w(ls-clear-button)
+          class(
+            @style,
+            :clear_tag_button,
+            @clear_tag_button_class,
+            @clear_tag_button_extra_class
+          ) ++
+            if @no_basic_styles_for_clear_buttons,
+              do: [],
+              else: ~w(ls-clear-tag-button)
         }
       >
         <%= if @clear_button == [] do %>
-          <.x />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 20 20"
+            width="20"
+            height="20"
+            fill="currentColor"
+            aria-hidden="true"
+          >
+            <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
+          </svg>
         <% else %>
-          <%= render_slot(@clear_button) %>
+          {render_slot(@clear_button)}
         <% end %>
       </button>
-    <% end %>
+    </div>
+  </div>
+
+  <div style={
+    unless @no_basic_styles_for_clear_buttons,
+      do: "display: grid; grid-template-columns: minmax(0, 1fr); align-items: center"
+  }>
+    <input
+      type="text"
+      id={Phoenix.HTML.Form.input_id(@field.form, "#{@field.field}_text_input")}
+      name={Phoenix.HTML.Form.input_name(@field.form, "#{@field.field}_text_input")}
+      class={
+        class(@style, :text_input, @text_input_class, @text_input_extra_class) ++
+          List.wrap(
+            if Enum.any?(@selection),
+              do: class(@style, :text_input_selected, @text_input_selected_class)
+          )
+      }
+      style={unless @no_basic_styles_for_clear_buttons, do: "grid-area: 1 / 1"}
+      placeholder={@placeholder}
+      phx-target={@myself}
+      phx-change="change"
+      disabled={@disabled}
+      autocomplete="off"
+      phx-focus="focus"
+      phx-click="click"
+      phx-blur="blur"
+      value={
+        case {@mode, @selection} do
+          {:single, [option | _]} -> to_string(option[:selected_label] || option.label)
+          _ -> ""
+        end
+      }
+    />
+    <button
+      :if={@mode == :single && @allow_clear && !@disabled && Enum.any?(@selection)}
+      type="button"
+      phx-click="clear"
+      phx-target={@myself}
+      aria-label="Clear selection"
+      style={
+        unless @no_basic_styles_for_clear_buttons,
+          do:
+            "grid-area: 1 / 1; justify-self: end; margin-inline-end: 0.3125rem; min-height: 1.25rem; min-width: 1.25rem"
+      }
+      class={
+        class(@style, :clear_button, @clear_button_class, @clear_button_extra_class) ++
+          if @no_basic_styles_for_clear_buttons,
+            do: [],
+            else: ~w(ls-clear-button)
+      }
+    >
+      <%= if @clear_button == [] do %>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 20 20"
+          width="20"
+          height="20"
+          fill="currentColor"
+          aria-hidden="true"
+        >
+          <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
+        </svg>
+      <% else %>
+        {render_slot(@clear_button)}
+      <% end %>
+    </button>
   </div>
   <%= if @mode == :single do %>
-    <%= hidden_input(@field.form, @field.field,
-      disabled: @disabled,
-      class: "single-mode",
-      value: value(@selection)
-    ) %>
+    <input
+      type="hidden"
+      id={@field.id}
+      name={@field.name}
+      disabled={@disabled}
+      class="single-mode"
+      value={
+        case @selection do
+          [%{value: nil} | _] ->
+            ""
+
+          [%{value: value} | _] when is_atom(value) or is_binary(value) or is_number(value) ->
+            to_string(value)
+
+          [%{value: value} | _] ->
+            Phoenix.json_library().encode!(value)
+
+          [] ->
+            ""
+        end
+      }
+    />
   <% else %>
-    <!-- TODO: the stuff below could be replaced with a single hidden, readonly multiselect, but updates don't quite work. So we resort to hidden inputs for now -->
-    <%= if Enum.empty?(@selection) do %>
-      <input
-        type="hidden"
-        name={"#{@field.form.name}[#{@field.field}_empty_selection]"}
-        id={"#{@field.id}_empty_selection"}
-        disabled={@disabled}
-        data-live-select-empty
-      />
-    <% end %>
-    <%= for {value, idx} <- values(@selection) |> Enum.with_index() do %>
-      <input
-        type="hidden"
-        name={@field.name <> "[]"}
-        id={@field.id <> "_#{idx}"}
-        disabled={@disabled}
-        value={value}
-      />
-    <% end %>
+    <input
+      :if={Enum.empty?(@selection)}
+      type="hidden"
+      name={Phoenix.HTML.Form.input_name(@field.form, "#{@field.field}_empty_selection")}
+      id={"#{@field.id}_empty_selection"}
+      disabled={@disabled}
+      data-live-select-empty
+    />
+    <input
+      :for={{option, idx} <- Enum.with_index(@selection)}
+      type="hidden"
+      name={@field.name <> "[]"}
+      id={@field.id <> "_#{idx}"}
+      disabled={@disabled}
+      value={
+        case option.value do
+          nil -> ""
+          value when is_atom(value) or is_binary(value) or is_number(value) -> to_string(value)
+          value -> Phoenix.json_library().encode!(value)
+        end
+      }
+    />
   <% end %>
-  <%= if Enum.any?(@options) && !@hide_dropdown do %>
-    <ul class={class(@style, :dropdown, @dropdown_class, @dropdown_extra_class)}>
-      <%= for {option, idx} <- Enum.with_index(@options) do %>
-        <li class={
-          cond do
-            Map.has_key?(option, :disabled) && option.disabled ->
-              class(@style, :unavailable_option, @unavailable_option_class)
+  <ul
+    :if={Enum.any?(@options) && !@hide_dropdown}
+    class={class(@style, :dropdown, @dropdown_class, @dropdown_extra_class)}
+  >
+    <li
+      :for={{option, idx} <- Enum.with_index(@options)}
+      class={
+        cond do
+          Map.get(option, :disabled, false) ->
+            class(@style, :unavailable_option, @unavailable_option_class)
 
-            already_selected?(option, @selection) ->
-              class(@style, :selected_option, @selected_option_class)
+          @mode in [:tags, :quick_tags] &&
+              Enum.any?(@selection, &(&1.label == option.label && &1[:sticky])) ->
+            class(@style, :unavailable_option, @unavailable_option_class)
 
-            @max_selectable > 0 && length(@selection) >= @max_selectable ->
-              class(@style, :unavailable_option, @unavailable_option_class)
+          Enum.any?(@selection, &(&1.label == option.label)) ->
+            class(@style, :selected_option, @selected_option_class)
 
-            true ->
-              class(@style, :available_option, @available_option_class)
+          @max_selectable > 0 && length(@selection) >= @max_selectable ->
+            class(@style, :unavailable_option, @unavailable_option_class)
+
+          true ->
+            class(@style, :available_option, @available_option_class)
+        end
+      }
+    >
+      <div
+        class={
+          class(@style, :option, @option_class, @option_extra_class) ++
+            List.wrap(
+              if idx == @active_option,
+                do: class(@style, :active_option, @active_option_class)
+            )
+        }
+        data-idx={
+          case Enum.find(@selection, &(&1.label == option.label)) do
+            nil -> idx
+            selected -> if @mode == :quick_tags && !selected[:sticky], do: idx
           end
-        }>
-          <div
-            class={
-              class(@style, :option, @option_class, @option_extra_class) ++
-                List.wrap(
-                  if(idx == @active_option,
-                    do: class(@style, :active_option, @active_option_class)
-                  )
-                )
-            }
-            data-idx={
-              if @mode == :quick_tags or not already_selected?(option, @selection), do: idx
-            }
-          >
-            <%= if @option == [] do %>
-              <%= option.label %>
-            <% else %>
-              <%= render_slot(
-                @option,
-                Map.merge(option, %{selected: already_selected?(option, @selection)})
-              ) %>
-            <% end %>
-          </div>
-        </li>
-      <% end %>
-    </ul>
-  <% end %>
+        }
+      >
+        <%= if @option == [] do %>
+          {option.label}
+        <% else %>
+          {render_slot(
+            @option,
+            Map.put(option, :selected, Enum.any?(@selection, &(&1.label == option.label)))
+          )}
+        <% end %>
+      </div>
+    </li>
+  </ul>
 </div>

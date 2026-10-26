@@ -1,160 +1,153 @@
-## Style `LiveSelect` like a Phoenix Core Component, with label and errors
+# LiveSelect cheatsheet
 
-#### 1. Add this to `core_components.ex`:
+## Label and validation errors
 
-```elixir
-def live_select(%{field: %Phoenix.HTML.FormField{} = field} = assigns) do
-  assigns =
-    assigns
-    |> assign(:errors, Enum.map(field.errors, &translate_error(&1)))
-    |> assign(:live_select_opts, assigns_to_attributes(assigns, [:errors, :label]))
-  
-  ~H"""
-  <div phx-feedback-for={@field.name}>
-    <.label for={@field.id}><%= @label %></.label>
-    <LiveSelect.live_select
-      field={@field}
-      text_input_class={[
-        "mt-2 block w-full rounded-lg border-zinc-300 py-[7px] px-[11px]",
-        "text-zinc-900 focus:outline-none focus:ring-4 sm:text-sm sm:leading-6",
-        "phx-no-feedback:border-zinc-300 phx-no-feedback:focus:border-zinc-400 phx-no-feedback:focus:ring-zinc-800/5",
-        "border-zinc-300 focus:border-zinc-400 focus:ring-zinc-800/5",
-        @errors != [] && "border-rose-400 focus:border-rose-400 focus:ring-rose-400/10"
-      ]}
-      {@live_select_opts}
-    />
-  
-    <.error :for={msg <- @errors}><%= msg %></.error>
-  </div>
-  """
-end
+Keep the label and errors alongside the field in your application's template. The text input ID is the form field ID followed by `_text_input`. This example uses the application's existing `translate_error/1` function:
+
+```heex
+<label for={"#{@form[:city].id}_text_input"}>City</label>
+<.live_select field={@form[:city]} />
+<div :if={used_input?(@form[:city])}>
+  <p :for={error <- @form[:city].errors}>{translate_error(error)}</p>
+</div>
 ```
 
-#### 2. Then call it this way:
+When the field belongs to a LiveComponent, add `phx-target={@myself}` to LiveSelect so its events reach that component. Use your application's shared input and error classes to match the rest of its form controls. `used_input?/1` is the [LiveView API for filtering errors on unused fields](https://hexdocs.pm/phoenix_live_view/Phoenix.Component.html#used_input?/1).
 
-```elixir
-<.live_select field={@form[:city]} label="City" phx-target={@myself} />
+## Search after typing
+
+Set `update_min_len={1}` to search only when there is text. Clear the available options whenever the input receives focus:
+
+```heex
+<.live_select field={@form[:locations]} update_min_len={1} phx-focus="clear-options" />
 ```
-
-You can also pass any of the other `LiveSelect` options.
-
-## Implementing a simple search functionality
-
-### 1. With no options displayed if the user doesn't enter any text
-
-#### Heex template:
-
-```elixir
-<.live_select field={@form[:locations]} update_min_len={1} phx-focus="clear" />
-```
-
-#### Live view:
 
 ```elixir
 @impl true
 def handle_event("live_select_change", %{"id" => id, "text" => text}, socket) do
- options =
-   retrieve_locations()
-   |> Enum.filter(&(String.downcase(&1) |> String.contains?(String.downcase(text))))
+  query = String.downcase(text)
 
- send_update(LiveSelect.Component, options: options, id: id)
+  options =
+    retrieve_locations()
+    |> Enum.filter(fn location -> String.contains?(String.downcase(location), query) end)
 
- {:noreply, socket}
+  send_update(LiveSelect.Component, options: options, id: id)
+
+  {:noreply, socket}
 end
 
 @impl true
-def handle_event("clear", %{"id" => id}, socket) do
+def handle_event("clear-options", %{"id" => id}, socket) do
   send_update(LiveSelect.Component, options: [], id: id)
 
   {:noreply, socket}
 end
 ```
 
-### 2. With a fixed set of default options to be displayed when the text input is empty
+`retrieve_locations/0` represents the application's existing source of location names. For a database-backed search, let the application's query filter the available options instead.
 
-#### Heex template:
+## Default options for an empty search
 
-```elixir
-<.live_select field={@form[:locations]} update_min_len={0} phx-focus="set-default" options={@default_locations} />
+Set `update_min_len={0}` and initialise the field with the options to show before the user enters text:
+
+```heex
+<.live_select
+  field={@form[:locations]}
+  update_min_len={0}
+  phx-focus="default-options"
+  options={@default_locations}
+/>
 ```
-
-#### Live view:
 
 ```elixir
 @impl true
-def mount(socket) do
-  socket = assign(socket, default_locations: default_locations())
-  
-  {:ok, socket}
+def mount(_params, _session, socket) do
+  {:ok, assign(socket, default_locations: ["Berlin", "London", "New York"])}
 end
 
 @impl true
 def handle_event("live_select_change", %{"id" => id, "text" => text}, socket) do
   options =
-    if text == "" do 
+    if text == "" do
       socket.assigns.default_locations
     else
+      query = String.downcase(text)
+
       retrieve_locations()
-      |> Enum.filter(&(String.downcase(&1) |> String.contains?(String.downcase(text))))
+      |> Enum.filter(fn location -> String.contains?(String.downcase(location), query) end)
     end
-    
+
   send_update(LiveSelect.Component, options: options, id: id)
-    
+
   {:noreply, socket}
 end
 
 @impl true
-def handle_event("set-default", %{"id" => id}, socket) do
+def handle_event("default-options", %{"id" => id}, socket) do
   send_update(LiveSelect.Component, options: socket.assigns.default_locations, id: id)
 
   {:noreply, socket}
 end
 ```
 
-## Dropdown that opens above the input field
-{: .col-2}
+Merge the `default_locations` assign into your existing `mount/3` callback, which also prepares the form.
 
-### Tailwind
+## Open the dropdown above the field
 
-#### Heex template
+For Tailwind:
 
-```elixir
+```heex
 <.live_select
-   field={@form[:my_field]}
-   dropdown_extra_class="!top-full bottom-full" />
+  field={@form[:city]}
+  dropdown_extra_class="!top-full bottom-full"
+/>
 ```
 
-### DaisyUI
+For daisyUI:
 
-#### Heex template
-
-```elixir
+```heex
 <.live_select
-   field={@form[:my_field]}
-   style={:daisyui}
-   container_extra_class="dropdown-top" />
+  field={@form[:city]}
+  style={:daisyui}
+  container_extra_class="dropdown-top"
+/>
 ```
 
-## Display tags underneath the input field (Tailwind)
+The leading `!` removes a default class in LiveSelect's extra-class options.
 
-#### Heex template:
+## Display tags underneath the input
 
-```elixir
+Use a single-column grid with the text input first and tags last:
+
+```heex
 <.live_select
-   field={@form[:my_field]}
-   mode={:tags}
-   container_extra_class="flex flex-col"
-   dropdown_extra_class="top-11"
-   tags_container_extra_class="order-last" />
+  field={@form[:cities]}
+  mode={:tags}
+  container_extra_class="grid grid-cols-[1fr]"
+  tags_container_extra_class="order-last"
+/>
 ```
 
-## Limit the height of the dropdown and make it scrollable (Tailwind)
+The dropdown remains positioned below the component. To place it above the component, combine this with the previous recipe.
 
-#### Heex template:
+## Limit the dropdown height
 
-```
+```heex
 <.live_select
-   field={@form[:my_field]}
-   dropdown_extra_class="max-h-60 overflow-y-scroll" />
+  field={@form[:city]}
+  dropdown_extra_class="max-h-60 overflow-y-auto"
+/>
 ```
 
+## Use different selected labels
+
+Use `selected_label` to show a shorter label in single mode:
+
+```heex
+<.live_select
+  field={@form[:country]}
+  options={[%{label: "+60 Malaysia (MY)", selected_label: "+60", value: "MY"}]}
+/>
+```
+
+The dropdown shows `+60 Malaysia (MY)`, the selected input shows `+60`, and the submitted value is `MY`. Use `tag_label` for the corresponding label in `:tags` and `:quick_tags` modes.

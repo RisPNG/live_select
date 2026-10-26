@@ -1,9 +1,7 @@
-name: Elixir CI
+name: Dependency checks
 
 on:
   push:
-    branches:
-      - main
   pull_request:
 
 permissions:
@@ -11,57 +9,35 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-24.04
-    strategy:
-      matrix:
-        include:
-          # LiveView 1.0 isn't compatible with 1.14.0
-          - elixir: '1.14.1'
-            otp: '25'
-          - elixir: '1.15'
-            otp: '26'
-          - elixir: '1.16'
-            otp: '26'
-          - elixir: '1.17'
-            otp: '27'
-            lint: true
-          - elixir: '1.18'
-            otp: '27'
-            lint: true
+    runs-on: ubuntu-26.04
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Elixir
-        uses: erlef/setup-beam@v1
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          elixir-version: ${{ matrix.elixir }}
-          otp-version: ${{ matrix.otp }}
+          persist-credentials: false
 
-      - name: Restore dependencies cache
-        uses: actions/cache@v3
+      - name: Install project tools
+        uses: jdx/mise-action@82a612c5ab8bcda7cc5db6b7e81a8e7584c3dc6e # v5.2.3
         with:
-          path: deps
-          key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
-          restore-keys: ${{ runner.os }}-mix-
+          version: "2026.10.19"
 
-      - name: Install dependencies
-        run: mix deps.get
+      - name: Install Hex
+        run: mise exec -- mix local.hex --force
 
-      - name: Compile with warnings
-        run: mix compile --warnings-as-errors
-        if: ${{ matrix.lint }}
+      - name: Resolve current dependencies
+        run: mise exec -- mix deps.update --all
 
-      - name: Compile without warnings
-        run: mix compile
+      - name: Compile with warnings as errors
+        run: mise exec -- mix compile --warnings-as-errors
 
-      - name: Check format
-        run: mix format --check-formatted
-        if: ${{ matrix.lint }}
+      - name: Check formatting
+        run: mise exec -- mix format --check-formatted
 
-      - name: Check warnings
-        run: mix credo --only warning --ignore ExpensiveEmptyEnumCheck
-        if: ${{ matrix.lint }}
+      - name: Check JavaScript syntax
+        run: mise exec -- node --check assets/js/live_select.js
 
-      - name: Run tests
-        run: mix test
+      - name: Build Hex package
+        run: mise exec -- mix hex.build
+
+      - name: Inspect JavaScript package
+        run: mise exec -- npm pack --dry-run

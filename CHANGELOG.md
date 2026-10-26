@@ -1,3 +1,18 @@
+## Unreleased
+
+- Keep the repository and package focused on the LiveSelect dependency, with demo, test, asset-build, and documentation-tool dependencies removed.
+- Require Phoenix LiveView >= 1.2.13, Phoenix HTML >= 4.3.0, Phoenix >= 1.8.16, and Ecto >= 3.14.2.
+- Require Elixir >= 1.15.0 for the current Phoenix and LiveView releases.
+- Update the project toolchain to Erlang/OTP 29.1.2, Node.js 26.12.1, npm 12.2.1, and Rebar 3.28.0, and use the Ubuntu 26.04 CI runner.
+- Ship the JavaScript hook as ESM source for the consuming application's asset builder.
+- Render native form inputs and use template styles for clear-button sizing and positioning.
+- Update daisyUI defaults for version 5 and document Tailwind CSS 4 source registration.
+- Declare component attributes through Phoenix's public API and preserve support for enumerable options.
+- Preserve pending searches across DOM patches, flush them before Enter selection, and cancel timers and listeners when the component is destroyed.
+- Scope hook events to the component's controls so custom slot content cannot trigger searches or selection changes.
+- Preserve sticky tags across dropdown, keyboard, and tag-removal events, and avoid duplicate parent blur notifications.
+- Preserve sticky settings, disabled flags, and alternative labels when recovering selections after reconnecting.
+
 ## 1.7.5 (2026-02-08)
 
 * Bugfix: [fix out-of-bounds active_option crash](https://github.com/maxmarcon/live_select/pull/132)

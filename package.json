@@ -2,8 +2,13 @@
   "name": "live_select",
   "version": "1.7.5",
   "description": "JS hooks for LiveSelect",
-  "main": "priv/static/live_select.min.js",
-  "repository": "git@github.com:maxmarcon/live_select.git",
+  "main": "assets/js/live_select.js",
+  "repository": "git@github.com:RisPNG/live_select.git",
   "author": "Max Marcon <maxmarcon@gmx.net>",
-  "license": "Apache License 2.0"
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": "./assets/js/live_select.js",
+  "files": [
+    "assets/js/live_select.js"
+  ]
 }

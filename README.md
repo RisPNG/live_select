@@ -2,223 +2,158 @@
 
 [![Hex](https://img.shields.io/hexpm/v/live_select.svg)](https://hex.pm/packages/live_select)
 [![Hexdocs](https://img.shields.io/badge/-docs-green)](https://hexdocs.pm/live_select)
-[![Elixir CI](https://github.com/maxmarcon/live_select/actions/workflows/elixir.yml/badge.svg)](https://github.com/maxmarcon/live_select/actions/workflows/elixir.yml)
 
-Dynamic (multi)selection field for LiveView.
+LiveSelect is a dynamic selection field for Phoenix LiveView. Your LiveView retrieves options as the user types, and LiveSelect renders the dropdown and submits the selection through the form.
 
-`LiveSelect` is a LiveView component that implements a dynamic selection field with a dropdown. The content of the
-dropdown is filled by your LiveView as the user types. This allows you to easily create an 
-interface for search-like functionalities with type-ahead. `LiveSelect`s features include:
+- Select one value with `:single`, several values with `:tags`, or several values while keeping the dropdown open with `:quick_tags`.
+- Configure search timing, selection limits, disabled options, and user-defined values.
+- Use Tailwind CSS or daisyUI styles, or supply your own classes with `style={:none}`.
+- Customise option labels, tags, and clear buttons through slots.
 
-* Single as well as multiple selection
-* Options to configure the behaviour, such as minimum number of characters that trigger an update or the maximum number of selectable options
-* Default styles for daisyUI and tailwindcss, which are fully customizable and can be completely overridden if needed
-* Ability to customize the rendered HTML for dropdown entries and tags using slots.
+This repository contains the dependency and its source JavaScript hook. It does not include a demo application, test dependencies, a JavaScript build step, or a server to start.
 
-### [Try it in the showcase app](https://live-select.fly.dev/) 🔬
+## Installation
 
-### Single selection (single mode)
-
-![DEMO](https://raw.githubusercontent.com/maxmarcon/live_select/main/priv/static/images/demo_single.gif)
-
-### Multiple selection (tags mode)
-
-![DEMO](https://raw.githubusercontent.com/maxmarcon/live_select/main/priv/static/images/demo_tags.gif)
-
-### Multiple selection (quick_tags mode)
-
-![DEMO](https://raw.githubusercontent.com/maxmarcon/live_select/main/priv/static/images/demo_quick_tags.gif)
-
-## Usage Example 🧭
-
-_Template:_
+To use this checkout before its changes are published, add a local path dependency. Replace the example path with the checkout's location:
 
 ```elixir
-  <.form for={@form} phx-change="change">
-    <.live_select field={@form[:city_search]} /> 
-  </.form>
+{:live_select, ">= 1.7.5", path: "../live_select"}
 ```
 
-**NOTE:** If your form is implemented in a LiveComponent, add `phx-target={@myself}`, like this:
+To consume the fork's source from GitHub after the changes are pushed:
 
 ```elixir
-  <.live_select field={@form[:city_search]} phx-target={@myself} />
+{:live_select, ">= 1.7.5", github: "RisPNG/live_select"}
 ```
 
-_In the LiveView or LiveComponent that's the target of your form events:_
-
-  ```elixir
-  @impl true
-  def handle_event("live_select_change", %{"text" => text, "id" => live_select_id}, socket) do 
-    cities = City.search(text)
-    # cities = [ 
-    # {"New York City", [-74.00597,40.71427]}, 
-    # {"New Kingston", [-76.78319,18.00747]}, 
-    # ... 
-    # ]
-
-    send_update(LiveSelect.Component, id: live_select_id, options: cities)
-    
-    {:noreply, socket}
-  end
-
-  @impl true
-  def handle_event(
-        "change",
-        %{"my_form" => %{"city_search_text_input" => city_name, "city_search" => city_coords}},
-        socket
-      ) do
-    IO.puts("You selected city #{city_name} located at: #{city_coords}")
-
-    {:noreply, socket}
-  end  
-  ```
-
-Refer to the [module documentation](https://hexdocs.pm/live_select/LiveSelect.html) for the details, and
-check out the [cheatsheet](https://hexdocs.pm/live_select/cheatsheet.html) for some useful tips.
-
-## Installation 📦
-
-To install, add this to your dependencies:
+The upstream Hex release remains available, but it does not include this fork's unreleased changes:
 
 ```elixir
-[
-    {:live_select, "~> 1.0"}
-]
+{:live_select, ">= 1.7.5"}
 ```
 
-## Javascript hooks 🪝
+Run the dependency command from your application:
 
-`LiveSelect` relies on Javascript hooks to work. You need to add `LiveSelect`'s hooks to your live socket.
-`LiveSelect` distributes its Javascript code (a single file) in the same way as LiveView, by including an
-npm package as part of its hex package.
+```sh
+mise exec -- mix deps.get
+```
 
-To include `LiveSelect`'s hooks, add this to your `app.js` file:
+The Hex version requirement permits newer releases. Your application's `mix.lock` selects exact Hex versions or Git commits, so use `mise exec -- mix deps.update live_select` when you intend to update it. A path dependency uses the current checkout directly.
+
+Import the component in your application's HTML helpers, or call it as `<LiveSelect.live_select />`:
+
+```elixir
+import LiveSelect, only: [live_select: 1]
+```
+
+## JavaScript hook
+
+Add the hook to the `LiveSocket` configuration in your application's `assets/js/app.js`:
 
 ```javascript
-import live_select from "live_select"
+import LiveSelect from "live_select"
 
-// if you don't have any other hooks:
-let liveSocket = new LiveSocket("/live", Socket, {params: {_csrf_token: csrfToken}, hooks: live_select})
-
-// if you have other hooks:
 const hooks = {
-    MyHook: {
-        // ...
-    },
-    ...live_select
+  ...LiveSelect,
+  MyHook
 }
-let liveSocket = new LiveSocket("/live", Socket, {params: {_csrf_token: csrfToken}, hooks})
+
+const liveSocket = new LiveSocket("/live", Socket, {
+  params: {_csrf_token: csrfToken},
+  hooks
+})
 ```
 
-### If you're using Webpack or another NPM-based builder
+If you have no other hooks, pass `hooks: LiveSelect` directly. LiveSelect ships the ESM source in its Hex package, so the consuming application's asset builder bundles it with the other hooks.
 
-If you're using an npm-based builder such as Webpack, you will need to add `LiveSelect` to the list of your dependencies in your `package.json` (just as you did with LiveView):
+Replace direct imports of `priv/static/live_select.min.js` with the package import above. The prebuilt minified file is no longer included.
 
-```js
+Phoenix applications using esbuild's dependency paths can resolve this import directly. If your asset builder resolves packages through npm, add the Hex dependency as a local package in `assets/package.json`:
+
+```json
 {
   "dependencies": {
-    "phoenix": "file:../deps/phoenix",
-    "phoenix_html": "file:../deps/phoenix_html",
-    "phoenix_live_view": "file:../deps/phoenix_live_view",
-    "live_select":  "file:../deps/live_select" // <-- add this line, and add an extra "../" if you're in an umbrella app
+    "live_select": "file:../deps/live_select"
   }
 }
 ```
 
-And then run `npm install` from your `assets` folder. You will also need to run `npm install --force live_select`
-whenever you update the `LiveSelect` hex package in order to get the latest JS code.
+Use `file:../../../deps/live_select` when the assets directory is inside an umbrella application's `apps/my_app/assets`. Run `mise exec -- npm install` in the assets directory after adding the package, and refresh the local package when updating the Hex dependency.
 
-## Styling 🎨
+## Usage
 
-`LiveSelect` supports 3 styling modes:
+Render LiveSelect inside a form:
 
-* `tailwind`: uses standard tailwind utility classes (the default)
-* `daisyui`: uses [daisyUI](https://daisyui.com/) classes.
-* `none`: no styling at all.
-
-The choice of style is controlled by the `style` option
-in [live_select/1](https://hexdocs.pm/live_select/LiveSelect.html#live_select/1).
-`tailwind` and `daisyui` styles come with sensible defaults which can be selectively extended or completely overridden.
-
-Refer to the [Styling section](https://hexdocs.pm/live_select/styling.html) for further details.
-
-> ⚠️ **Attention**
-> 
-> Please note the different paths for a standalone or umbrella app.
-
-### tailwind v3
-
-If you're using `tailwind` or `daisyui` styles, you need to add one of the following lines to the `content` section in
-your `tailwind.config.js`:
-
-```javascript
-module.exports = {
-    content: [
-        //...
-        '../deps/live_select/lib/live_select/component.*ex', // <-- for a standalone app
-        '../../../deps/live_select/lib/live_select/component.*ex' // <-- for an umbrella app
-    ]
-    //..
-}
+```heex
+<.form for={@form} phx-change="change">
+  <.live_select field={@form[:city_search]} />
+</.form>
 ```
 
-### tailwind v4
+If the component belongs to a LiveComponent, pass `phx-target={@myself}` so search events reach that component:
 
-If you are using `tailwind v4+` and are not using a `tailwind.config.js` file you instead need to add the relevant `@source` directive to your `app.css` file:
+```heex
+<.live_select field={@form[:city_search]} phx-target={@myself} />
+```
+
+Handle `live_select_change` in the target LiveView or LiveComponent. The event provides the search text, component ID, and form field ID:
+
+```elixir
+@impl true
+def handle_event("live_select_change", %{"text" => text, "id" => id}, socket) do
+  options = City.search(text)
+
+  send_update(LiveSelect.Component, id: id, options: options)
+
+  {:noreply, socket}
+end
+```
+
+`City.search/1` is your application's search function. It can return labels and values such as `[{"New York City", "NYC"}, {"New Kingston", "NK"}]`. Selecting an option triggers the form's normal change event:
+
+```elixir
+@impl true
+def handle_event("change", %{"my_form" => %{"city_search" => city}}, socket) do
+  {:noreply, assign(socket, selected_city: city)}
+end
+```
+
+Composite values, such as maps and lists, are submitted as JSON. Use `LiveSelect.decode/1` to decode them before processing form parameters. LiveSelect uses the JSON library configured by Phoenix. Applications using Elixir 1.18 or later can configure `config :phoenix, :json_library, JSON`, or provide the Jason library used by Phoenix's default configuration. Ecto support preserves form values from schemas, associations, and embeds.
+
+See the [module documentation](https://hexdocs.pm/live_select/LiveSelect.html) for the full API and the [cheatsheet](cheatsheet.cheatmd) for common configurations.
+
+## Styling
+
+Use `style={:tailwind}` for the default Tailwind utilities, `style={:daisyui}` for daisyUI components, or `style={:none}` for your own CSS. Tailwind CSS and daisyUI belong to the consuming application's asset setup.
+
+For Tailwind CSS 4, register the dependency's source directory in `assets/css/app.css`:
 
 ```css
-@source "../../deps/live_select/lib/live_select/component.*ex" /* for a standalone app */
-@source "../../../../deps/live_select/lib/live_select/component.*ex" /* for an umbrella app */
+@import "tailwindcss";
+@source "../../deps/live_select/lib";
 ```
 
+Use `@source "../../../../deps/live_select/lib";` for an umbrella application's `apps/my_app/assets/css/app.css`. Paths are relative to the stylesheet. Registering the directory covers the Elixir styles and HEEx template, as described in [Tailwind's source detection documentation](https://tailwindcss.com/docs/detecting-classes-in-source-files).
 
+For daisyUI 5, also enable its plugin in your application's CSS, following the [daisyUI installation guide](https://daisyui.com/docs/install/):
 
-
-## Showcase app 🎪
-
-The repository includes a showcase app that you can use to experiment with the different options and parameters
-for `LiveSelect`.
-The showcase app is available [here](https://live-select.fly.dev/).
-
-To start the showcase app locally, simply run:
-
-```
-mix setup
-PORT=4001 mix phx.server
+```css
+@plugin "daisyui";
 ```
 
-from within the cloned repository. The app will be available at http://localhost:4001. The showcase app allows you to
-quickly experiment with options and styles, providing an easy way to fine tune your `LiveSelect` component. The app also
-shows the messages and events that your `LiveView` receives. For each event or message, the app shows the function head
-of the callback that your LiveView needs to implement in order to handle the event.
+See the [styling guide](styling.md) for class overrides, supported elements, and Tailwind CSS 3 configuration.
 
-## Contribute 🤝
+## Maintaining the dependency
 
-Contributions are very welcome! However, if you want do add a new feature please discuss it first by creating an issue so we can all agree that it's needed. 
-Also, it's important to add a test that covers it. If you don't know how to write the test or need guidance,
-I'm happy to help.
+`mise.toml` selects `latest` for Elixir, Erlang/OTP, Node.js, npm, and Rebar, while `.tool-versions` records a fixed snapshot of their current releases. npm is selected separately from the version bundled with Node.js, and Mix uses the managed Rebar executable. Install the tools and Hex, then fetch dependencies, compile, check formatting, and inspect the Hex package with:
 
-Use `mix test` to run the entire test suite, which is subdivided into 3 main files:
+```sh
+mise install
+mise exec -- mix local.hex --force
+mise exec -- mix deps.get
+mise exec -- mix compile --warnings-as-errors
+mise exec -- mix format --check-formatted
+mise exec -- mix hex.build
+```
 
-* `test/live_select/component_test.exs` - everything that can be tested by rendering the component statically
-* `test/live_select_test.exs` - tests for `single` mode that require a running LiveView 
-* `test/live_select_tags_test.exs` - tests for `tags` mode that require a running LiveView
-* `test/live_select_quick_tags_test.exs` - tests for `quick_tags` mode that require a running LiveView
-
-Tests that require a LiveView use the showcase app as the parent LiveView.
-
-## Roadmap 🛣️
-
-- [X] Add `package.json` to enable `import live_select from "live_select"`
-- [X] Make sure component classes are included by tailwind
-- [X] Enable custom styling
-- [X] Rename LiveSelect.render to live_select
-- [X] Customizable placeholder
-- [X] Enable configuration of styles in the showcase app
-- [X] Add support for vanilla tailwind styles
-- [X] Enable multiple selection mode
-- [X] Expose as function component (and drop LV 0.17 support)
-- [X] Add cheatsheet
-- [X] Additional multiple selection mode 
-- [ ] Add section to document testing strategies
+Use `mise upgrade` to fetch newer tool releases. Update all locked dependencies with `mise exec -- mix deps.update --all` when adopting newer releases. Requirements use `>=`, while `mix.lock` records the versions used for local verification. This permits future releases but cannot guarantee compatibility with changes they introduce.
