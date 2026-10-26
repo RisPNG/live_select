@@ -25,15 +25,15 @@ export default {
             if (inputEvent) {
                 clearTimeout(this._changeTimeout)
                 this._changeTimeout = undefined
-                this._pendingText = undefined
+                this._searchText = undefined
             }
-            if (currentText != null && this._pendingText === undefined) {
+            if (currentText != null && this._searchText === undefined) {
                 this.el.querySelector(":scope > div > input[type=text]").value = currentText
             }
             committed.forEach(({ id, parent_event }, index) => {
                 if (index === lastInputIndex) {
-                    const selector = mode === "single" ? "input.single-mode" :
-                        (selection.length === 0 ? "input[data-live-select-empty]" : "input[type=hidden]")
+                    const selector = mode === "single" ? ":scope > input.single-mode" :
+                        (selection.length === 0 ? ":scope > input[data-live-select-empty]" : ":scope > input[type=hidden]")
                     this.el.querySelector(selector).dispatchEvent(new Event("input", { bubbles: true }))
                 }
                 if (parent_event) {
@@ -41,26 +41,24 @@ export default {
                     if (target) {
                         this.pushEventTo(target, parent_event, { id })
                     } else {
-                        this.pushEvent(parent_event, { id })
+                        this.pushEvent(parent_event, { id }, () => {})
                     }
                 }
             })
         },
         requestOptions() {
-            clearTimeout(this._changeTimeout)
-            this._changeTimeout = undefined
-            if (this._pendingText === undefined) {
+            if (this._changeTimeout === undefined) {
                 return
             }
-            const text = this._pendingText
-            this._pendingText = undefined
-            this.pushEventTo(this.el, "change", { text })
+            clearTimeout(this._changeTimeout)
+            this._changeTimeout = undefined
+            const text = this._searchText
             const payload = { id: this.el.id, field: this.el.dataset.field, text }
             const target = this.el.dataset.phxTarget
             if (target) {
                 this.pushEventTo(target, "live_select_change", payload)
             } else {
-                this.pushEvent("live_select_change", payload)
+                this.pushEvent("live_select_change", payload, () => {})
             }
         },
         mounted() {
@@ -81,7 +79,7 @@ export default {
                     if (event.key === "Escape") {
                         clearTimeout(this._changeTimeout)
                         this._changeTimeout = undefined
-                        this._pendingText = undefined
+                        this._searchText = undefined
                     }
                 }
                 const visualOrder = Array.from(this.el.querySelectorAll(":scope > ul div[data-idx]"))
@@ -97,13 +95,13 @@ export default {
                 clearTimeout(this._changeTimeout)
                 this._changeTimeout = undefined
                 const text = event.target.value.trim()
+                this._searchText = text
                 if (text.length >= parseInt(this.el.dataset.updateMinLen, 10)) {
-                    this._pendingText = text
+                    this.pushEventTo(this.el, "change", { text })
                     this._changeTimeout = setTimeout(() => {
                         this.requestOptions()
                     }, parseInt(this.el.dataset.debounce, 10))
                 } else {
-                    this._pendingText = undefined
                     this.pushEventTo(this.el, "options_clear", {})
                 }
             }, { signal })
@@ -123,7 +121,7 @@ export default {
                 }
                 clearTimeout(this._changeTimeout)
                 this._changeTimeout = undefined
-                this._pendingText = undefined
+                this._searchText = undefined
                 clearTimeout(this._blurTimeout)
                 this._blurTimeout = setTimeout(() => {
                     this._blurTimeout = undefined
@@ -173,8 +171,9 @@ export default {
             this._recoverySelection ??= this.selection
             this._selectionUpdates = []
             clearTimeout(this._changeTimeout)
+            this._changeTimeout = undefined
             clearTimeout(this._blurTimeout)
-            this._pendingText = undefined
+            this._searchText = undefined
         },
         reconnected() {
             this._selectionUpdates = []
@@ -195,8 +194,9 @@ export default {
             this._selectionUpdates = []
             this._eventHandlers.abort()
             clearTimeout(this._changeTimeout)
+            this._changeTimeout = undefined
             clearTimeout(this._blurTimeout)
-            this._pendingText = undefined
+            this._searchText = undefined
         }
     }
 }

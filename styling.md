@@ -2,6 +2,18 @@
 
 LiveSelect supports `:tailwind`, `:daisyui`, and `:none` through the `style` attribute. The default is `:tailwind`. The built-in styles are defined together in `LiveSelect.Component`, and the consuming application supplies Tailwind CSS or daisyUI through its own asset build.
 
+## Base stylesheet
+
+Import the packaged base stylesheet in the application's `assets/css/app.css`:
+
+```css
+@import "../../deps/live_select/assets/css/live_select.css";
+```
+
+The Mix dependency import works without an npm installation. Use `../../../../deps/live_select/assets/css/live_select.css` for an umbrella application, and adjust the path for a local Mix dependency. With a package installed through `assets/package.json`, use `../node_modules/live_select/assets/css/live_select.css`. For an installation through the application's root `package.json`, use `../../node_modules/live_select/assets/css/live_select.css`. Asset builders that resolve package exports can import `live_select/live_select.css`.
+
+The base stylesheet supplies the search-input grid and clear-button dimensions for all styles, including `:none`. It uses external CSS classes, so it works with a Content Security Policy such as `style-src 'self'`. Set `no_basic_styles_for_clear_buttons={true}` when your application's styles should own this layout instead.
+
 ## Tailwind CSS 4
 
 Register the dependency source directory in the application's `assets/css/app.css`. This includes both the Elixir class definitions and the HEEx template:
@@ -67,7 +79,7 @@ The class options accept a string or list of strings. `{element}_class` replaces
 
 ## Default classes
 
-These classes come from the component's central style definitions. The template separately applies native CSS for the search-input grid and clear-button sizing, so these basic controls also work without Tailwind.
+These classes come from the component's central style definitions. The base stylesheet separately supplies the search-input grid and clear-button sizing, so these basic controls also work without Tailwind.
 
 | Element | daisyUI classes | Tailwind classes |
 | --- | --- | --- |
@@ -116,7 +128,7 @@ For full control, use `style={:none}` and supply the classes your application ow
 
 ## Clear buttons
 
-LiveSelect positions and sizes clear buttons through native CSS in its template. The search input and its clear button share one grid cell, with the button aligned to the right. Clear buttons have a minimum size of `1.25rem`. Use the `:clear_button` slot to replace their content. Set `no_basic_styles_for_clear_buttons={true}` when the application's classes should control their size and positioning as well.
+LiveSelect positions and sizes clear buttons through its base stylesheet. The search input and its clear button share one grid cell, with the button aligned to the right. Clear buttons have a minimum size of `1.25rem`. Use the `:clear_button` slot to replace their content. Set `no_basic_styles_for_clear_buttons={true}` when the application's classes should control their size and positioning as well.
 
 The default clear control is small, so a text label such as "Clear" needs custom button styles. Keep those styles in the same shared theme layer as the other form controls.
 

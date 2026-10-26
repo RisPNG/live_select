@@ -10,7 +10,7 @@ LiveSelect is a dynamic selection field for Phoenix LiveView. Your LiveView retr
 - Use Tailwind CSS or daisyUI styles, or supply your own classes with `style={:none}`.
 - Customise option labels, tags, and clear buttons through slots.
 
-This repository contains the dependency and its source JavaScript hook. It does not include a demo application, test dependencies, a JavaScript build step, or a server to start.
+This repository contains the dependency, its source JavaScript hook, and test suites. The consuming application owns asset builds and server setup.
 
 ## Installation
 
@@ -120,11 +120,23 @@ end
 
 Composite values, such as maps and lists, are submitted as JSON. Use `LiveSelect.decode/1` to decode them before processing form parameters. LiveSelect uses the JSON library configured by Phoenix. Applications using Elixir 1.18 or later can configure `config :phoenix, :json_library, JSON`, or provide the Jason library used by Phoenix's default configuration. Ecto support preserves form values from schemas, associations, and embeds.
 
+Empty tags and quick-tags selections submit a native multiple-input placeholder, such as `city_search: [""]`. Ecto casts this to an empty array, and `LiveSelect.decode/1` removes blank placeholders when decoding composite values. Existing handlers for `city_search_empty_selection` can be removed.
+
 See the [module documentation](https://hexdocs.pm/live_select/LiveSelect.html) for the full API and the [cheatsheet](cheatsheet.cheatmd) for common configurations.
 
 ## Styling
 
 Use `style={:tailwind}` for the default Tailwind utilities, `style={:daisyui}` for daisyUI components, or `style={:none}` for your own CSS. Tailwind CSS and daisyUI belong to the consuming application's asset setup.
+
+Import the base stylesheet in your application's `assets/css/app.css` for the search-input layout and clear buttons:
+
+```css
+@import "../../deps/live_select/assets/css/live_select.css";
+```
+
+The Mix dependency import works without an npm installation. Adjust the path when using a local Mix dependency or an umbrella application. If you installed the local package through `assets/package.json`, use `../node_modules/live_select/assets/css/live_select.css`. For a package installed through the application's root `package.json`, use `../../node_modules/live_select/assets/css/live_select.css`. Asset builders with package-export support can import `live_select/live_select.css`.
+
+These styles also work with `style={:none}` and a Content Security Policy that permits styles from your application's origin. Set `no_basic_styles_for_clear_buttons={true}` when your own styles provide the layout and clear-button sizing.
 
 For Tailwind CSS 4, register the dependency's source directory in `assets/css/app.css`:
 
@@ -152,8 +164,13 @@ mise install
 mise exec -- mix local.hex --force
 mise exec -- mix deps.get
 mise exec -- mix compile --warnings-as-errors
+mise exec -- npm ci
+mise exec -- mix test --warnings-as-errors
+mise exec -- npm test
 mise exec -- mix format --check-formatted
 mise exec -- mix hex.build
 ```
+
+The ExUnit suite uses a test-only LiveView host to check form rendering, selection events, and recovery. The hook suite uses Node's test runner and jsdom to check DOM events, debounce timing, and notifications after DOM updates. The test host starts without an HTTP listener. `lazy_html` is a test-only Mix dependency, and `jsdom` is an npm development dependency, so consuming applications do not need either package.
 
 Use `mise upgrade` to fetch newer tool releases. Update all locked dependencies with `mise exec -- mix deps.update --all` when adopting newer releases. Requirements use `>=`, while `mix.lock` records the versions used for local verification. This permits future releases but cannot guarantee compatibility with changes they introduce.

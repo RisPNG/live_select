@@ -33,6 +33,15 @@ jobs:
       - name: Check formatting
         run: mise exec -- mix format --check-formatted
 
+      - name: Run ExUnit tests
+        run: mise exec -- mix test --warnings-as-errors
+
+      - name: Install hook test dependencies
+        run: mise exec -- npm ci
+
+      - name: Run hook tests
+        run: mise exec -- npm test
+
       - name: Check JavaScript syntax
         run: mise exec -- node --check assets/js/live_select.js
 

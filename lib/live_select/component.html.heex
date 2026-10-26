@@ -32,10 +32,6 @@
         phx-target={@myself}
         phx-value-idx={idx}
         aria-label="Remove selection"
-        style={
-          unless @no_basic_styles_for_clear_buttons,
-            do: "min-height: 1.25rem; min-width: 1.25rem"
-        }
         class={
           class(
             @style,
@@ -66,10 +62,7 @@
     </div>
   </div>
 
-  <div style={
-    unless @no_basic_styles_for_clear_buttons,
-      do: "display: grid; grid-template-columns: minmax(0, 1fr); align-items: center"
-  }>
+  <div class={unless @no_basic_styles_for_clear_buttons, do: "ls-input-container"}>
     <input
       type="text"
       id={Phoenix.HTML.Form.input_id(@field.form, "#{@field.field}_text_input")}
@@ -79,9 +72,11 @@
           List.wrap(
             if Enum.any?(@selection),
               do: class(@style, :text_input_selected, @text_input_selected_class)
-          )
+          ) ++
+          if @no_basic_styles_for_clear_buttons,
+            do: [],
+            else: ~w(ls-text-input)
       }
-      style={unless @no_basic_styles_for_clear_buttons, do: "grid-area: 1 / 1"}
       placeholder={@placeholder}
       phx-target={@myself}
       phx-change={%Phoenix.LiveView.JS{}}
@@ -103,11 +98,6 @@
       phx-click="clear"
       phx-target={@myself}
       aria-label="Clear selection"
-      style={
-        unless @no_basic_styles_for_clear_buttons,
-          do:
-            "grid-area: 1 / 1; justify-self: end; margin-inline-end: 0.3125rem; min-height: 1.25rem; min-width: 1.25rem"
-      }
       class={
         class(@style, :clear_button, @clear_button_class, @clear_button_extra_class) ++
           if @no_basic_styles_for_clear_buttons,
@@ -158,8 +148,9 @@
     <input
       :if={Enum.empty?(@selection)}
       type="hidden"
-      name={Phoenix.HTML.Form.input_name(@field.form, "#{@field.field}_empty_selection")}
+      name={@field.name <> "[]"}
       id={"#{@field.id}_empty_selection"}
+      value=""
       disabled={@disabled}
       data-live-select-empty
     />

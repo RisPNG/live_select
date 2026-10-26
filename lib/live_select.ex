@@ -148,7 +148,7 @@ defmodule LiveSelect do
   </.form>
   ```
 
-  The change handler receives a list of JSON-encoded coordinate lists, or no field when the selection is empty:
+  The change handler receives a list of JSON-encoded coordinate lists. An empty selection submits a blank multiple-input placeholder, which `decode/1` removes:
 
   ```elixir
   @impl true
@@ -401,7 +401,7 @@ defmodule LiveSelect do
   @doc ~S"""
   Decodes JSON-encoded selection values received through form parameters.
 
-  Use this for composite option values, such as maps or lists. A list of submitted values is decoded element by element. An absent tags field (`nil`) becomes an empty list, and an empty single field (`""`) becomes `nil`.
+  Use this for composite option values, such as maps or lists. A list of submitted values is decoded element by element, ignoring blank placeholders from empty multiple inputs. An absent tags field (`nil`) becomes an empty list, and an empty single field (`""`) becomes `nil`.
 
   ```elixir
   params = update_in(params, ~w(my_form my_field), &LiveSelect.decode/1)
@@ -425,10 +425,19 @@ defmodule LiveSelect do
     json = Phoenix.json_library()
 
     case selection do
-      nil -> []
-      "" -> nil
-      selection when is_list(selection) -> Enum.map(selection, &json.decode!/1)
-      selection -> json.decode!(selection)
+      nil ->
+        []
+
+      "" ->
+        nil
+
+      selection when is_list(selection) ->
+        selection
+        |> Enum.reject(&(&1 == ""))
+        |> Enum.map(&json.decode!/1)
+
+      selection ->
+        json.decode!(selection)
     end
   end
 end

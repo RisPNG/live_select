@@ -1,0 +1,21 @@
+.ls-input-container {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: center;
+}
+
+.ls-text-input {
+    grid-area: 1 / 1;
+}
+
+.ls-clear-button {
+    grid-area: 1 / 1;
+    justify-self: end;
+    margin-inline-end: 0.3125rem;
+}
+
+.ls-clear-button,
+.ls-clear-tag-button {
+    min-height: 1.25rem;
+    min-width: 1.25rem;
+}

@@ -7,8 +7,18 @@
   "author": "Max Marcon <maxmarcon@gmx.net>",
   "license": "Apache-2.0",
   "type": "module",
-  "exports": "./assets/js/live_select.js",
+  "exports": {
+    ".": "./assets/js/live_select.js",
+    "./live_select.css": "./assets/css/live_select.css"
+  },
+  "scripts": {
+    "test": "node --test test/js/*.test.js"
+  },
   "files": [
-    "assets/js/live_select.js"
-  ]
+    "assets/js/live_select.js",
+    "assets/css/live_select.css"
+  ],
+  "devDependencies": {
+    "jsdom": "^30.1.3"
+  }
 }

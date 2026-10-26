@@ -206,7 +206,9 @@ defmodule LiveSelect.Component do
 
     socket =
       if value_update? do
-        update(socket, :selection, fn
+        socket
+        |> assign(:pending_enter, false)
+        |> update(:selection, fn
           selection, %{options: options, value: value, mode: mode, value_mapper: value_mapper} ->
             update_selection(value, selection, options, mode, value_mapper)
         end)
@@ -252,8 +254,9 @@ defmodule LiveSelect.Component do
     socket =
       socket
       |> assign(
-        :hide_dropdown,
-        if(socket.assigns.mode == :quick_tags, do: socket.assigns.hide_dropdown, else: true)
+        hide_dropdown:
+          if(socket.assigns.mode == :quick_tags, do: socket.assigns.hide_dropdown, else: true),
+        pending_enter: false
       )
       |> client_select(%{
         parent_event: socket.assigns[:"phx-blur"],
@@ -269,7 +272,7 @@ defmodule LiveSelect.Component do
 
   @impl true
   def handle_event("self_blur", _params, socket) do
-    {:noreply, assign(socket, :hide_dropdown, true)}
+    {:noreply, assign(socket, hide_dropdown: true, pending_enter: false)}
   end
 
   @impl true
@@ -304,7 +307,12 @@ defmodule LiveSelect.Component do
   def handle_event("change", %{"text" => text}, socket) do
     socket =
       socket
-      |> assign(hide_dropdown: false, current_text: text, awaiting_update: true)
+      |> assign(
+        hide_dropdown: false,
+        current_text: text,
+        awaiting_update: true,
+        pending_enter: false
+      )
 
     {:noreply, socket}
   end
@@ -411,7 +419,7 @@ defmodule LiveSelect.Component do
   def handle_event("keydown", %{"key" => "Escape"}, socket) do
     socket =
       socket
-      |> assign(:hide_dropdown, true)
+      |> assign(hide_dropdown: true, pending_enter: false)
       |> client_select(%{
         current_text:
           case socket.assigns do
@@ -448,7 +456,7 @@ defmodule LiveSelect.Component do
   def handle_event("clear", _params, socket) do
     socket =
       socket
-      |> assign(selection: [], current_text: "")
+      |> assign(selection: [], current_text: "", pending_enter: false)
       |> client_select(%{input_event: true, current_text: ""})
 
     {:noreply, socket}

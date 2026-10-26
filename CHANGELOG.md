@@ -5,14 +5,17 @@
 - Require Elixir >= 1.15.0 for the current Phoenix and LiveView releases.
 - Update the project toolchain to Erlang/OTP 29.1.2, Node.js 26.12.1, npm 12.2.1, and Rebar 3.28.0, and use the Ubuntu 26.04 CI runner.
 - Ship the JavaScript hook as ESM source for the consuming application's asset builder.
-- Render native form inputs and use template styles for clear-button sizing and positioning.
+- Render native form inputs and provide a base stylesheet for clear-button sizing and positioning without inline styles.
 - Update daisyUI defaults for version 5 and document Tailwind CSS 4 source registration.
 - Declare component attributes through Phoenix's public API and preserve support for enumerable options.
 - Preserve pending searches across DOM patches, flush them before Enter selection, and cancel timers and listeners when the component is destroyed.
+- Preserve typed searches after debounce while delayed focus replies arrive, and handle interrupted parent notifications through LiveView's native callbacks.
+- Cancel queued Enter selections when the user changes the search, presses Escape, leaves the field, clears the selection, or receives an explicit value update.
 - Scope hook events to the component's controls so custom slot content cannot trigger searches or selection changes.
 - Preserve sticky tags across dropdown, keyboard, and tag-removal events, and avoid duplicate parent blur notifications.
 - Preserve sticky settings, disabled flags, and alternative labels when recovering selections after reconnecting.
 - Use native bindings to remove tags and avoid redundant form events while searching.
+- Submit empty multiple selections through native form fields so clearing the final tag also clears a persisted array. Decode blank multiple-input placeholders when processing composite values.
 - Synchronise selection notifications with committed DOM updates, preserve callback order during delayed patches, and recover missing labels without replacing current server values or metadata.
 
 ## 1.7.5 (2026-02-08)
