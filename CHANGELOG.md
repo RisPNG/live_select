@@ -12,6 +12,8 @@
 - Scope hook events to the component's controls so custom slot content cannot trigger searches or selection changes.
 - Preserve sticky tags across dropdown, keyboard, and tag-removal events, and avoid duplicate parent blur notifications.
 - Preserve sticky settings, disabled flags, and alternative labels when recovering selections after reconnecting.
+- Use native bindings to remove tags and avoid redundant form events while searching.
+- Synchronise selection notifications with committed DOM updates, preserve callback order during delayed patches, and recover missing labels without replacing current server values or metadata.
 
 ## 1.7.5 (2026-02-08)
 

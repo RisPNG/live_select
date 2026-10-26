@@ -1,5 +1,51 @@
 export default {
     LiveSelect: {
+        syncSelection() {
+            const revision = Number(this.el.dataset.selectionRevision)
+            const committed = this._selectionUpdates.filter(update => update.revision <= revision)
+            const latest = committed[committed.length - 1]
+            if (!latest || latest.revision !== revision) {
+                return
+            }
+            this._selectionUpdates = this._selectionUpdates.filter(update => update.revision > revision)
+            const { selection, mode } = latest
+            let currentText
+            let lastInputIndex = -1
+            for (const [index, update] of committed.entries()) {
+                if (update.current_text != null) {
+                    currentText = update.current_text
+                }
+                if (update.input_event) {
+                    lastInputIndex = index
+                }
+            }
+            const inputEvent = lastInputIndex !== -1
+            this.selection = selection
+            this._skipNextScroll = inputEvent
+            if (inputEvent) {
+                clearTimeout(this._changeTimeout)
+                this._changeTimeout = undefined
+                this._pendingText = undefined
+            }
+            if (currentText != null && this._pendingText === undefined) {
+                this.el.querySelector(":scope > div > input[type=text]").value = currentText
+            }
+            committed.forEach(({ id, parent_event }, index) => {
+                if (index === lastInputIndex) {
+                    const selector = mode === "single" ? "input.single-mode" :
+                        (selection.length === 0 ? "input[data-live-select-empty]" : "input[type=hidden]")
+                    this.el.querySelector(selector).dispatchEvent(new Event("input", { bubbles: true }))
+                }
+                if (parent_event) {
+                    const target = this.el.dataset.phxTarget
+                    if (target) {
+                        this.pushEventTo(target, parent_event, { id })
+                    } else {
+                        this.pushEvent(parent_event, { id })
+                    }
+                }
+            })
+        },
         requestOptions() {
             clearTimeout(this._changeTimeout)
             this._changeTimeout = undefined
@@ -18,6 +64,7 @@ export default {
             }
         },
         mounted() {
+            this._selectionUpdates = []
             this._eventHandlers = new AbortController()
             const { signal } = this._eventHandlers
 
@@ -70,14 +117,6 @@ export default {
                 }
             }, { signal })
 
-            this.el.addEventListener("click", (event) => {
-                const button = event.target.closest("button[data-idx]")
-                const tagButtons = this.el.querySelectorAll(":scope > div > div > button[data-idx]")
-                if (button && Array.from(tagButtons).includes(button)) {
-                    this.pushEventTo(this.el, "option_remove", { idx: button.dataset.idx })
-                }
-            }, { signal })
-
             this.el.addEventListener("focusout", (event) => {
                 if (event.target !== this.el.querySelector(":scope > div > input[type=text]")) {
                     return
@@ -94,33 +133,12 @@ export default {
                 }, 100)
             }, { signal })
 
-            this.handleEvent("select", ({ id, selection, mode, current_text, input_event, parent_event }) => {
-                if (this.el.id !== id) {
+            this.handleEvent("select", (event) => {
+                if (this.el.id !== event.id) {
                     return
                 }
-                this.selection = selection
-                this._skipNextScroll = Boolean(input_event)
-                if (input_event) {
-                    clearTimeout(this._changeTimeout)
-                    this._changeTimeout = undefined
-                    this._pendingText = undefined
-                }
-                if (current_text != null && this._pendingText === undefined) {
-                    this.el.querySelector(":scope > div > input[type=text]").value = current_text
-                }
-                if (input_event) {
-                    const selector = mode === "single" ? "input.single-mode" :
-                        (selection.length === 0 ? "input[data-live-select-empty]" : "input[type=hidden]")
-                    this.el.querySelector(selector).dispatchEvent(new Event("input", { bubbles: true }))
-                }
-                if (parent_event) {
-                    const target = this.el.dataset.phxTarget
-                    if (target) {
-                        this.pushEventTo(target, parent_event, { id })
-                    } else {
-                        this.pushEvent(parent_event, { id })
-                    }
-                }
+                this._selectionUpdates.push(event)
+                this.syncSelection()
             })
 
             this.handleEvent("scroll_to_option", ({ id, idx }) => {
@@ -149,13 +167,32 @@ export default {
                 }
                 this._dropdownScrollTop = null
             }
+            this.syncSelection()
+        },
+        disconnected() {
+            this._recoverySelection ??= this.selection
+            this._selectionUpdates = []
+            clearTimeout(this._changeTimeout)
+            clearTimeout(this._blurTimeout)
+            this._pendingText = undefined
         },
         reconnected() {
-            if (this.selection && this.selection.length > 0) {
-                this.pushEventTo(this.el, "selection_recovery", this.selection)
+            this._selectionUpdates = []
+            const recoverySelection = this._recoverySelection ?? this.selection
+            if (recoverySelection && recoverySelection.length > 0) {
+                this.pushEventTo(this.el, "selection_recovery", recoverySelection).then(results => {
+                    if (results.every(result => result.status === "fulfilled") &&
+                        this._recoverySelection === recoverySelection) {
+                        this._recoverySelection = undefined
+                    }
+                })
+            } else {
+                this._recoverySelection = undefined
             }
         },
         destroyed() {
+            this._recoverySelection = undefined
+            this._selectionUpdates = []
             this._eventHandlers.abort()
             clearTimeout(this._changeTimeout)
             clearTimeout(this._blurTimeout)

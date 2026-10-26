@@ -94,6 +94,7 @@ defmodule LiveSelect.Component do
         pending_enter: false,
         awaiting_update: true,
         selection: [],
+        selection_revision: 0,
         value_mapper: &Function.identity/1
       )
 
@@ -180,6 +181,8 @@ defmodule LiveSelect.Component do
         end
       end)
 
+    previous_selection = socket.assigns.selection
+
     socket =
       if field = assigns[:field] do
         update(
@@ -199,17 +202,22 @@ defmodule LiveSelect.Component do
         socket
       end
 
-    socket =
-      if Map.has_key?(assigns, :value) do
-        socket =
-          update(socket, :selection, fn
-            selection,
-            %{options: options, value: value, mode: mode, value_mapper: value_mapper} ->
-              update_selection(value, selection, options, mode, value_mapper)
-          end)
+    value_update? = Map.has_key?(assigns, :value)
 
+    socket =
+      if value_update? do
+        update(socket, :selection, fn
+          selection, %{options: options, value: value, mode: mode, value_mapper: value_mapper} ->
+            update_selection(value, selection, options, mode, value_mapper)
+        end)
+      else
+        socket
+      end
+
+    socket =
+      if value_update? || socket.assigns.selection != previous_selection do
         client_select(socket, %{
-          input_event: true,
+          input_event: value_update?,
           current_text:
             case socket.assigns do
               %{mode: :single, selection: [option | _]} ->
@@ -303,7 +311,7 @@ defmodule LiveSelect.Component do
 
   @impl true
   def handle_event("selection_recovery", selection_from_client, socket) do
-    options =
+    cached_options =
       for %{"label" => _label, "value" => _value} = option <- selection_from_client do
         option
         |> Map.take(~w(label value selected_label tag_label sticky disabled))
@@ -312,17 +320,37 @@ defmodule LiveSelect.Component do
 
     json = Phoenix.json_library()
 
+    selection =
+      Enum.map(socket.assigns.selection, fn %{value: value} = current ->
+        encoded_value = json.encode!(value)
+
+        if Enum.any?(socket.assigns.options, fn %{value: option_value} ->
+             json.encode!(option_value) == encoded_value
+           end) || current != normalize_selection_value(value, [], &Function.identity/1) do
+          current
+        else
+          case Enum.find(cached_options, fn %{value: option_value} ->
+                 json.encode!(option_value) == encoded_value
+               end) do
+            nil -> current
+            cached -> Map.merge(current, cached)
+          end
+        end
+      end)
+
+    socket =
+      assign(socket, options: selection, selection: selection)
+
     {:noreply,
-     assign(socket,
-       options: options,
-       selection:
-         Enum.map(socket.assigns.selection, fn %{value: value} ->
-           Enum.find(options, fn %{value: option_value} ->
-             json.encode!(option_value) == json.encode!(value)
-           end)
-         end)
-         |> Enum.filter(& &1)
-     )}
+     client_select(socket, %{
+       input_event: false,
+       current_text:
+         case {socket.assigns.mode, socket.assigns.selection} do
+           {:single, [option | _]} -> option[:selected_label] || option.label
+           {:single, []} -> ""
+           _ -> socket.assigns.current_text
+         end
+     })}
   end
 
   @impl true
@@ -582,11 +610,14 @@ defmodule LiveSelect.Component do
   end
 
   defp client_select(socket, extra_params) do
+    socket = update(socket, :selection_revision, &(&1 + 1))
+
     socket
     |> push_event(
       "select",
       %{
         id: socket.assigns.id,
+        revision: socket.assigns.selection_revision,
         mode: socket.assigns.mode,
         selection: socket.assigns.selection
       }

@@ -7,6 +7,7 @@
   data-update-min-len={@update_min_len}
   data-field={@field.id}
   data-debounce={@debounce}
+  data-selection-revision={@selection_revision}
 >
   <div
     :if={@mode in [:tags, :quick_tags] && Enum.any?(@selection)}
@@ -27,6 +28,9 @@
         :if={!option[:sticky] && !@disabled}
         type="button"
         data-idx={idx}
+        phx-click="option_remove"
+        phx-target={@myself}
+        phx-value-idx={idx}
         aria-label="Remove selection"
         style={
           unless @no_basic_styles_for_clear_buttons,
@@ -80,7 +84,7 @@
       style={unless @no_basic_styles_for_clear_buttons, do: "grid-area: 1 / 1"}
       placeholder={@placeholder}
       phx-target={@myself}
-      phx-change="change"
+      phx-change={%Phoenix.LiveView.JS{}}
       disabled={@disabled}
       autocomplete="off"
       phx-focus="focus"
